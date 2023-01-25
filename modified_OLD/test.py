@@ -4,7 +4,7 @@ from read_dat import *
 
 
 #create a read_dat object
-file = read_dat("../AmBe.dat",t_short=np.array([20,25,30,40,50,200]))
+file = read_dat("/home/mkidson/gitRepos/dDAQ_dev/STNG.dat",t_short=np.array([20,25,30,40,50,200]))
 
 #we will be pulling out the L and S values for both channels, or if you have 
 #run the lst mode output already you can just import the L and S values 
