@@ -20,7 +20,7 @@ class read_dat(object):
     maxChannels = 64
     preambleSize = 4+20+4*maxChannels
     
-    def __init__(self,file_name,sample_rate = 2,CFD = [0.75,6,6],t_start = np.array([-80]),t_long = np.array([400]), t_short = np.array([10]),baseline_samples = 200,output=[0,0,0,0,0]): #time parameters in ns
+    def __init__(self,file_name,sample_rate = 2,CFD = [0.75,6,6],t_start = [-80],t_long = [400], t_short = [10],baseline_samples = 200,output=[0,0,0,0,0]): #time parameters in ns
         self.fileName = file_name
         self.inputFile = open(file_name, "rb")
         self.header = self.inputFile.read(self.headerSize)
@@ -29,9 +29,9 @@ class read_dat(object):
         self.endFile = False
         self.nsPerSample = sample_rate
         self.CFD = CFD
-        self.tStart = t_start
-        self.tShort = t_short
-        self.tLong = t_long
+        self.tStart = np.array(t_start)
+        self.tShort = np.array(t_short)
+        self.tLong = np.array(t_long)
         self.chActive =np.zeros(8)
         self.fails = np.zeros((len(self.chActive),5))#start, long, short, integral, zero
         self.totFails=np.zeros(len(self.chActive))
@@ -102,9 +102,12 @@ class read_dat(object):
 
         out = np.array(out)
         if cuts!=False:
-            cuts = np.array(cuts)
-            inc = cuts[cuts!=0]
-            cuts = np.arange(len(cuts))[cuts!=0]
+            if cuts == True:
+                print('Please input an array if you want to apply cuts. Defaulting to no cuts')
+            else:
+                cuts = np.array(cuts)
+                inc = cuts[cuts!=0]
+                cuts = np.arange(len(cuts))[cuts!=0]
 
 
         #initiate the output files for the traces and other parameters, one per channel
