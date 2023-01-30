@@ -324,6 +324,7 @@ class read_dat(object):
 #
 ###########################################################################################################################################
     def select_events(self, L, S, cut_id=[0], inc=[1], visual=False, lims = [[0, 50000], [0, 1]]):
+        plt.figure()
         # cut_id=cut_id[inc!=0]
         L = np.array(L)
         S = np.array(S)
