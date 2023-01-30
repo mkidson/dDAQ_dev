@@ -12,6 +12,7 @@ from event import *
 import matplotlib.cm as cm
 import matplotlib.colors as colors
 import matplotlib.pyplot as plt 
+import matplotlib.patches as pat
 from scipy.interpolate import interp1d
 import csv
 
@@ -40,6 +41,7 @@ class read_dat(object):
         self.baselineSamples = baseline_samples
         self.selection = [[],[]]
         self.cuts = []
+        self.polygon_cuts = []
         print('init complete')
        
 #--------------------------------------------------------------------------------------------------------------------------------------------------
@@ -221,6 +223,15 @@ class read_dat(object):
                         self.selection[i % 2].extend(A)
                         i += 1
                     print('Selections Imported')
+        
+        # Turning points into polygons
+        indices = np.cumsum(self.cuts)
+        split_cuts = np.split(self.selection, indices, axis=1)[:-1]
+        for split in split_cuts:
+            self.polygon_cuts.append(pat.Polygon(np.transpose(split)))
+        
+        print('Polygons Created')
+
 
 
 ##################################################################################################################################################
@@ -324,11 +335,33 @@ class read_dat(object):
 #
 ###########################################################################################################################################
     def select_events(self, L, S, cut_id=[0], inc=[1], visual=False, lims = [[0, 50000], [0, 1]]):
-        plt.figure()
+        fig, ax = plt.subplots()
         # cut_id=cut_id[inc!=0]
         L = np.array(L)
         S = np.array(S)
         mask = []
+
+        for i in range(len(cut_id)):
+            temp_mask = self.polygon_cuts[cut_id[i]].contains_points(np.transpose([L, S]))
+
+            if inc[i] == -1:
+                temp_mask = np.invert(temp_mask)
+            if i != 0:
+                if inc[i] == 1:
+                    mask = (mask) | (temp_mask)
+                elif inc[i] == -1:
+                    mask = (mask) & (temp_mask)
+            else:
+                mask = temp_mask
+        
+            if visual == True:
+                self.polygon_cuts[cut_id[i]].set_fill(False)
+                self.polygon_cuts[cut_id[i]].set_ec('r')
+                self.polygon_cuts[cut_id[i]].set_ls('--')
+                ax.add_patch(self.polygon_cuts[cut_id[i]])
+
+
+        """ Chloe's code. had a bug that was fixed by switching to polygons
         for i in range(len(cut_id)):
             indices = np.cumsum(self.cuts)
             split = np.split(self.selection, indices, axis=1)[:-1]
@@ -369,9 +402,9 @@ class read_dat(object):
             if visual == True:
                 plt.plot(upper_cut[0], upp_spline(upper_cut[0]), 'r--')
                 plt.plot(lower_cut[0], low_spline(lower_cut[0]), 'r--')
+        """
 
         if visual == True:
-
 
             cmap_b, cmap_r = cm.get_cmap('Blues_r'), cm.get_cmap('Reds_r')
             plt.title('Cut Check')
