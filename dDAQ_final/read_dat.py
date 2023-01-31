@@ -417,7 +417,7 @@ class read_dat(object):
 
             plt.xlabel('L [ch]')
             plt.ylabel('S [ch]')
-            plt.show()
+            plt.show(block=True)
         return L[mask], S[mask]
 
 ###########################################################################################################################################
