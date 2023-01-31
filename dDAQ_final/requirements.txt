@@ -1,3 +1,5 @@
 numpy
 matplotlib
-ipympl
+csv
+scipy
+PyQt5

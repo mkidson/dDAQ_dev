@@ -201,7 +201,7 @@ class read_dat(object):
                 plt.xlabel('L [ch]')
                 plt.ylabel('S [ch]')
                 cip = fig.canvas.mpl_connect('key_press_event', self.__press)
-                plt.show()
+                plt.show(block=True)
 
 
         # elif mode == "a":
