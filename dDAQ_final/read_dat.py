@@ -154,7 +154,7 @@ class read_dat(object):
                     calc_params = np.array([np.array(ev[ch[i]].get_long_integral()), np.array(ev[ch[i]].get_pulse_shape()), ev[ch[i]].get_t0(), ev[ch[i]].get_baseline(), ev[ch[i]].get_pulse_height()[0]])
                     
                     if type(cuts) != bool and i == 0:
-                        L, S = self.select_events(calc_params[0], calc_params[1], cuts, inc)
+                        L, S = self.select_events(calc_params[0], calc_params[1], 'L', 'S', cuts, inc)
                         if len(L) == 0:
                             counter -= 1
                             break
@@ -347,10 +347,15 @@ class read_dat(object):
         # cut_id=cut_id[inc!=0]
         x_param = np.array(x_param)
         y_param = np.array(y_param)
+        check_points = np.transpose([x_param, y_param])
         mask = []
 
         for i in range(len(cut_id)):
-            temp_mask = self.polygon_cuts[cut_id[i]].contains_points(np.transpose([x_param, y_param]))
+            if len(np.shape(check_points)) < 2:
+                temp_mask = self.polygon_cuts[cut_id[i]].contains_point(check_points)
+            else:
+                temp_mask = self.polygon_cuts[cut_id[i]].contains_points(check_points)
+
 
             if inc[i] == -1:
                 temp_mask = np.invert(temp_mask)
