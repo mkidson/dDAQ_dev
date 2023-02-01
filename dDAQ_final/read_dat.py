@@ -190,7 +190,7 @@ class read_dat(object):
 #   file: input file for previously determined cuts 
 #   L and S: required if mode is m
 #--------------------------------------------------------------------------------------------------------------------------------------------------
-    def add_selections(self, x_param=[], y_param=[], x_param_name='x_param', y_param_name='y_param', mode='m',lims=[[0, 50000], [0, 1]], file=False):
+    def add_selections(self, x_param=[], y_param=[], x_param_name='L', y_param_name='S', mode='m',lims=[[0, 50000], [0, 1]], file=False):
         if mode == 'm':
             if len(x_param) == 0 or len(y_param) == 0:
                 print('Error! No x_param and y_param values recieved. x_param and y_param values required for manual cut mode. ')
@@ -337,7 +337,7 @@ class read_dat(object):
 #
 #
 ###########################################################################################################################################
-    def select_events(self, x_param, y_param, x_param_name='x_param', y_param_name='y_param', cut_id=[0], inc=[1], visual=False, lims = [[0, 50000], [0, 1]]):
+    def select_events(self, x_param, y_param, x_param_name='L', y_param_name='S', cut_id=[0], inc=[1], visual=False, lims = [[0, 50000], [0, 1]]):
         fig, ax = plt.subplots()
         # cut_id=cut_id[inc!=0]
         x_param = np.array(x_param)
