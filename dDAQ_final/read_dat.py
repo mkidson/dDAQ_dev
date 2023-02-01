@@ -154,7 +154,7 @@ class read_dat(object):
                     calc_params = np.array([np.array(ev[ch[i]].get_long_integral()), np.array(ev[ch[i]].get_pulse_shape()), ev[ch[i]].get_t0(), ev[ch[i]].get_baseline(), ev[ch[i]].get_pulse_height()[0]])
                     
                     if type(cuts) != bool and i == 0:
-                        L, S = self.select_events(calc_params[0], calc_params[1], 'L', 'S', cuts, inc)
+                        L, S = self.select_events(calc_params[0], calc_params[1], 'L', 'S', cuts, inc, visual=False)
                         if len(L) == 0:
                             counter -= 1
                             break
@@ -343,7 +343,8 @@ class read_dat(object):
 #
 ###########################################################################################################################################
     def select_events(self, x_param, y_param, x_param_name='L', y_param_name='S', cut_id=[0], inc=[1], visual=False, lims = [[0, 50000], [0, 1]]):
-        fig, ax = plt.subplots()
+        if visual == True:
+            fig, ax = plt.subplots()
         # cut_id=cut_id[inc!=0]
         x_param = np.array(x_param)
         y_param = np.array(y_param)
