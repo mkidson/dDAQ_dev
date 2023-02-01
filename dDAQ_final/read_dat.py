@@ -190,19 +190,19 @@ class read_dat(object):
 #   file: input file for previously determined cuts 
 #   L and S: required if mode is m
 #--------------------------------------------------------------------------------------------------------------------------------------------------
-    def add_selections(self, L=[], S=[], mode='m',lims=[[0, 50000], [0, 1]], file=False):
+    def add_selections(self, x_param=[], y_param=[], x_param_name='x_param', y_param_name='y_param', mode='m',lims=[[0, 50000], [0, 1]], file=False):
         if mode == 'm':
-            if len(L) == 0 or len(S) == 0:
-                print('Error! No S and L values recieved. L and S values required for manual cut mode. ')
+            if len(x_param) == 0 or len(y_param) == 0:
+                print('Error! No x_param and y_param values recieved. x_param and y_param values required for manual cut mode. ')
             else:
                 fig = plt.figure(1)
                 # plt = fig.add_subplot(111)
                 cmap_r = cm.get_cmap('Blues_r')
-                plt.hist2d(L, S, [256,256], lims, norm=colors.LogNorm(vmin=1), cmap=cmap_r)
+                plt.hist2d(x_param, y_param, [256,256], lims, norm=colors.LogNorm(vmin=1), cmap=cmap_r)
                 plt.colorbar()
                 # plt.title(r"Press $a$ to add a cut, $x$ to end the cut, $u$ to undo the last point added to the current cut, $d$ ")
-                plt.xlabel('L [ch]')
-                plt.ylabel('S [ch]')
+                plt.xlabel(f'{x_param_name} [ch]')
+                plt.ylabel(f'{y_param_name} [ch]')
                 cip = fig.canvas.mpl_connect('key_press_event', self.__press)
                 plt.show(block=True)
 
@@ -319,7 +319,7 @@ class read_dat(object):
             indices = np.cumsum(self.cuts)
             split = np.split(self.selection, indices, axis=1)[:-1]
             
-            with open(f'{self.fileName[:-4]}_cuts_SL.csv', 'w', newline='') as f:
+            with open(f'{self.fileName[:-4]}_cuts.csv', 'w', newline='') as f:
             # create the csv writer
                 writer = csv.writer(f)
 
@@ -328,7 +328,7 @@ class read_dat(object):
                 for i in range(len(split)):
                     for j in range(len(split[i])):
                         writer.writerow(split[i][j])
-            print(f'Selections outputted to file: {self.fileName[:-4]}_cuts_SL.csv')
+            print(f'Selections outputted to file: {self.fileName[:-4]}_cuts.csv')
 
         return
 ###########################################################################################################################################
@@ -337,15 +337,15 @@ class read_dat(object):
 #
 #
 ###########################################################################################################################################
-    def select_events(self, L, S, cut_id=[0], inc=[1], visual=False, lims = [[0, 50000], [0, 1]]):
+    def select_events(self, x_param, y_param, x_param_name='x_param', y_param_name='y_param', cut_id=[0], inc=[1], visual=False, lims = [[0, 50000], [0, 1]]):
         fig, ax = plt.subplots()
         # cut_id=cut_id[inc!=0]
-        L = np.array(L)
-        S = np.array(S)
+        x_param = np.array(x_param)
+        y_param = np.array(y_param)
         mask = []
 
         for i in range(len(cut_id)):
-            temp_mask = self.polygon_cuts[cut_id[i]].contains_points(np.transpose([L, S]))
+            temp_mask = self.polygon_cuts[cut_id[i]].contains_points(np.transpose([x_param, y_param]))
 
             if inc[i] == -1:
                 temp_mask = np.invert(temp_mask)
@@ -411,17 +411,17 @@ class read_dat(object):
 
             cmap_b, cmap_r = cm.get_cmap('Blues_r'), cm.get_cmap('Reds_r')
             plt.title('Cut Check')
-            if L[mask] != []:
-                plt.hist2d(L[mask], S[mask], [256,256], lims, norm=colors.LogNorm(vmin=1), cmap=cmap_r)
+            if x_param[mask] != []:
+                plt.hist2d(x_param[mask], y_param[mask], [256,256], lims, norm=colors.LogNorm(vmin=1), cmap=cmap_r)
                 plt.colorbar(label='Included Events [Counts]', pad=0.1, shrink=0.5, anchor=(0.0, 0.5))
-            if L[~mask] != []:
-                plt.hist2d(L[~mask], S[~mask], [256,256], lims, norm=colors.LogNorm(vmin=1), cmap=cmap_b)
+            if x_param[~mask] != []:
+                plt.hist2d(x_param[~mask], y_param[~mask], [256,256], lims, norm=colors.LogNorm(vmin=1), cmap=cmap_b)
                 plt.colorbar(label='Excluded Events [Counts]', shrink=0.5)
 
-            plt.xlabel('L [ch]')
-            plt.ylabel('S [ch]')
+            plt.xlabel(f'{x_param_name} [ch]')
+            plt.ylabel(f'{y_param_name} [ch]')
             plt.show(block=True)
-        return L[mask], S[mask]
+        return x_param[mask], y_param[mask]
 
 ###########################################################################################################################################
 
