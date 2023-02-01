@@ -94,6 +94,9 @@ class read_dat(object):
         writer_params = []
         if ch == True:
             ch = np.arange(len(ev))
+        elif ch == False:
+            print('ch must either be True or an array of ints')
+            return None
         if output != False:
             if output == True:
                 for i in range(len(ch)):
