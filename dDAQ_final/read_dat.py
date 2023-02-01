@@ -95,7 +95,7 @@ class read_dat(object):
         if ch == True:
             ch = np.arange(len(ev))
         elif ch == False:
-            print('ch must either be True or an array of ints')
+            print('ch must either be True or an array of ints. Returning None')
             return None
         if output != False:
             if output == True:
