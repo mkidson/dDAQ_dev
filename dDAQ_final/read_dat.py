@@ -87,7 +87,7 @@ class read_dat(object):
 #       cuts: if False no cuts will be selected. else an array of len cuts is expected 1 for include, 0 for ignore, -1 for exclude.
 #                   example: 3 cuts have been added, I want to include cut 1, and remove cut 2 and ignore cut 3 --> [1,-1,0]
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------
-    def lst_out(self, events=False, ch=True, output=True, traces=False, cuts=False, filename=""):
+    def lst_out(self, events=False, ch=True, output=True, traces=False, cuts=False, inc=None, filename=""):
         ev = self.read_event()
         out = []
         writer_trace = []
@@ -113,8 +113,13 @@ class read_dat(object):
                 print('Please input an array if you want to apply cuts. Defaulting to no cuts')
             else:
                 cuts = np.array(cuts)
-                inc = cuts[cuts != 0]
-                cuts = np.arange(len(cuts))[cuts != 0]
+                if inc == None:
+                    inc = np.ones(len(cuts))
+                elif len(inc) != len(cuts):
+                    print('len(inc) must be the same as len(cuts)')
+                    return None
+                else:
+                    inc = np.array(inc)
 
 
         #initiate the output files for the traces and other parameters, one per channel

@@ -13,7 +13,7 @@ for i in range(500):#read 1000 events
 		S[j].append(event[j].get_pulse_shape())
 		L[j].append(event[j].get_long_integral())
 
-file.add_selections(L=L[0],S=S[0],mode="m")#, file='/home/mkidson/gitRepos/dDAQ_dev/dDAQ_final/STNG_cuts_SL.csv')
+file.add_selections(x_param=L[0],y_param=S[0],mode="m")#, file='/home/mkidson/gitRepos/dDAQ_dev/dDAQ_final/STNG_cuts_SL.csv')
 
 L_neutrons, S_neutrons = file.select_events(L[0], S[0], cut_id=[0,1], inc=[1,-1], visual=True)
 # print(L_neutrons, S_neutrons)
