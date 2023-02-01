@@ -95,7 +95,7 @@ class read_dat(object):
         if ch == True:
             ch = np.arange(len(ev))
         elif ch == False:
-            print('ch must either be True or an array of ints. Returning None')
+            print('ERROR: ch must either be True or an array of ints. Returning None')
             return None
         if output != False:
             if output == True:
@@ -116,7 +116,7 @@ class read_dat(object):
                 if inc == None:
                     inc = np.ones(len(cuts))
                 elif len(inc) != len(cuts):
-                    print('len(inc) must be the same as len(cuts)')
+                    print('ERROR: len(inc) must be the same as len(cuts). Returning None')
                     return None
                 else:
                     inc = np.array(inc)
@@ -198,7 +198,7 @@ class read_dat(object):
     def add_selections(self, x_param=[], y_param=[], x_param_name='L', y_param_name='S', mode='m',lims=[[0, 50000], [0, 1]], file=False):
         if mode == 'm':
             if len(x_param) == 0 or len(y_param) == 0:
-                print('Error! No x_param and y_param values recieved. x_param and y_param values required for manual cut mode. ')
+                print('ERROR: No x_param and y_param values recieved. x_param and y_param values required for manual cut mode. ')
             else:
                 fig = plt.figure(1)
                 # plt = fig.add_subplot(111)
