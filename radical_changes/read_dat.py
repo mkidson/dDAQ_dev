@@ -19,11 +19,12 @@ import csv
 
 # Open file and skip over header preamble
 class read_dat(object):
+
     headerSize = 72
     maxChannels = 64
     preambleSize = 4+20+4*maxChannels
     
-    def __init__(self, file_name, sample_rate=2,CFD=[0.75, 6, 6], t_start=[-80], t_long=[400], t_short=[10], baseline_samples=200, output=[0,0,0,0,0]): #time parameters in ns
+    def __init__(self, file_name, sample_rate=2, CFD=[0.75, 6, 6], t_start=[-80], t_long=[400], t_short=[10], baseline_samples=200, output=[0,0,0,0,0]): #time parameters in ns
         self.fileName = file_name
         self.inputFile = open(file_name, 'rb')
         self.header = self.inputFile.read(self.headerSize)
@@ -48,6 +49,13 @@ class read_dat(object):
 # Function to read a single event
 #--------------------------------------------------------------------------------------------------------------------------------------------------
     def read_event(self):
+        """Reads the next event in the file, starting from the beginning, and returns an array of `event` objects, one for each active channel. If the end of the file is reached, it returns `True`.
+
+            Returns
+            -------
+            event array
+                Array of `event` objects, one for each active channel.
+        """
         preamble = np.frombuffer(self.inputFile.read(self.preambleSize), dtype=np.uint32)
         if not preamble.any(): #check end of file
             self.end_file = True
@@ -88,6 +96,35 @@ class read_dat(object):
 #                   example: 3 cuts have been added, I want to include cut 1, and remove cut 2 and ignore cut 3 --> [1,-1,0]
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------
     def lst_out(self, events=False, ch=True, output=True, traces=False, cuts=False, inc=None, filename=""):
+        """Reads a number of events from the file buffer for the channels specified, applying cuts if given. These cuts can be made using `read_dat.add_selections()`. Outputs a csv file for each active channel, containing
+
+            Args
+            ----
+            events : (False or int, optional) 
+                If int, specifies the number of events to read from the file. If False, it reads all events left in the file. Defaults to False.
+
+            ch : (True or int array, optional)
+                If True, reads out from all channels. If int array, reads out from channels specified, with numbering from 0. Defaults to True.
+
+            output : (bool or 5x1 int array, optional)
+                If True L [ch], S [ch], T_trigger [us], baseline [bits], pulse height [bits] are read out into a file per channel. If int array, it specifies the parameters to output with binary, where 1 means output and 0 means ignore. Defaults to True.
+
+            traces : (bool, optional)
+                If True, traces will be output in list mode in a csv file per channel. Otherwise traces will not be output. Defaults to False.
+
+            cuts : (bool or int array, optional)
+                If False, no cuts are applied to output. If an int array, it acts just like the cuts argument for `read_dat.select_events()`. If True it defaults to no cuts. Defaults to False.
+
+            inc : (None or int array, optional)
+                If int array, acts precisely like the inc argument for `read_dat.select_events()`, where a 1 includes the cut and -1 excludes it. If left as None, all cuts are considered to be included. Defaults to None.
+
+            filename : (str, optional)
+                Desired output file name. If left empty, it uses the `file_name` of the original file. Defaults to "".
+
+            Returns
+            -------
+            Should return nothing. If the arguments are supplied incorrectly, returns None.
+        """
         ev = self.read_event()
         out = []
         writer_trace = []
@@ -179,6 +216,34 @@ class read_dat(object):
 # Function to pull fail information from number of events processed
 #--------------------------------------------------------------------------------------------------------------------------------------------------
     def get_fails(self, display=False):
+        """Returns an nx5 array of ints, for n channels, in the format of [start, long, short, integral, zero]. The value at the associated index indicates the number of fails out of the processed events that have failed that check. Runs this check for all events processed.
+
+        ## Fail Details
+
+        | Index | Fail Name | Fail Condition    |
+        |---    |---    |---    |
+        | 0 | start | The start time is set outside of the acquisition window   |
+        | 1 | long  | The long integral end gate is outside of the acquisition window   |
+        | 2 | short | The short integral end gate is outside of the acquisition window  |
+        | 3 | integral  | The calculated short integral is negative or the calculated long integral has a smaller value than the calculated short integral  |
+        | 4 | zero  | The CFD calculation failed to return a reasonable t_0  |
+
+            Args
+            ----
+            display : (bool, optional)
+                If True, prints out the breakdown of fails to terminal. Defaults to False.
+
+            Returns
+            -------
+            fails : nx5 int array
+                Fail information in the format of [start, long, short, integral, zero] for n channels. The value at the associated index indicates the number of fails out of the processed events that have failed that check. See description for details on what each fail means.
+
+            totFails : int array
+                Number of events failed per channel.
+
+            eventCounter : int
+                Total number of events processed
+        """
         if display:
             for i in range(len(self.chActive)):
                 if np.sum(self.fails) == 0:
@@ -195,7 +260,58 @@ class read_dat(object):
 #   file: input file for previously determined cuts 
 #   L and S: required if mode is m
 #--------------------------------------------------------------------------------------------------------------------------------------------------
-    def add_selections(self, x_param=[], y_param=[], x_param_name='L', y_param_name='S', mode='m',lims=[[0, 50000], [0, 1]], file=False):
+    def add_selections(self, x_param=[], y_param=[], x_param_name='L', y_param_name='S', mode='m', lims=[[0, 50000], [0, 1]], file=False):
+        """Method to add multiple cuts to the events. Can be run in manual `m` or predetermined `p` modes. Manual mode allows the user to input arrays of `x_param` and `y_param` values so that cuts can be made to separate, for example, the neutron and gamma events. Predetermined mode allows the selections to be input from a file provided and no input is needed.
+
+            Args
+            ----
+            x_param : (float array, optional)
+                Array of x_param values for the processed events. Defaults to [].
+
+            y_param : (float array, optional)
+                Array of y_param values for the processed events. Defaults to [].
+
+            x_param_name : (str, optional)
+                Name for the value provided to x_param, used for display only. Defaults to 'L'.
+
+            y_param_name : (str, optional)
+                Name for the value provided to y_param, used for display only. Defaults to 'S'.
+
+            mode : (str, optional)
+                Character specifying mode of operation. 'm' is manual mode, where x_param and y_param arrays are required so selections can be made visually on a 2d histogram. 'p' is predetermined mode, where cuts are created from selections obtained from `file`. Defaults to 'm'.
+
+            lims : (2x2 float array, optional)
+                Array of x and y limits for the visual aid 2d histogram. Defaults to [[0, 50000], [0, 1]].
+
+            file : (bool or str, optional)
+                Specifies the input file to be used when in predetermined mode. If False when mode='p', it will request the file as input. Defaults to False.
+        
+        ---
+        
+        Selections are made by clicking on points on a 2D histogram, defining a polygon that encloses the events of interest. In manual mode, these arrays must be supplied. Once the cuts have been made, they get saved to the `read_dat` object as polygons and are used by the `lst_out` and `select_events` methods. 
+
+        By default, no file containing the coordinates of the selections is output when in manual mode. A key needs to be pressed and they will be output to a file named "`file_name`\_cuts.csv", where `file_name` is the file used to instantiate the `read_dat` class.
+
+        ### Making selections in manual mode
+
+        When in manual mode, we can make selections on the 2D histogram. There are a number of keys that can be pressed to activate certain commands.
+
+        | Key | Action    |
+        |---    |---    |
+        | a, A:  | Start a new selection   |
+        | u, U:  | Undo previous point, only usable while in a selection |
+        | x, X:  | End current selection. Can only end a selection if there are more than 2 co-ordinates in the selection    |
+        | d, D:  | Delete previous completed selection   |
+        | o, O:  | Output the selections added to the file "`file_name`\_cuts.csv"  |
+        | q, Q:  | Quit, ends visual guide and re-enters the main code segment   |
+
+        A typical selection would proceed as follows:
+        - Press "a" to start the selection.
+        - Choose at least 3 coordinates to enclose an area. If less than 3 are chosen before the next step, it will throw an error.
+        - Press "x" to end the selection. 
+        - If you want to export the selection so it can be used again later, press "o".
+        - Finally press "q" to quit.
+        """
         if mode == 'm':
             if len(x_param) == 0 or len(y_param) == 0:
                 print('ERROR: No x_param and y_param values recieved. x_param and y_param values required for manual cut mode. ')
@@ -343,6 +459,42 @@ class read_dat(object):
 #
 ###########################################################################################################################################
     def select_events(self, x_param, y_param, x_param_name='L', y_param_name='S', cut_id=[0], inc=[1], visual=False, lims = [[0, 50000], [0, 1]]):
+        """Method to pull the events which fall within the desired area. The area is defined by the inclusion or exclusion of cuts made using `add_selections`. If no selections have been made, then all events will be returned. A visual aid can be shown to aid in understanding which events are included or excluded.
+
+            Args
+            ----
+            x_param : (float array, optional)
+                Array of x_param values for the processed events. Defaults to [].
+
+            y_param : (float array, optional)
+                Array of y_param values for the processed events. Defaults to [].
+
+            x_param_name : (str, optional)
+                Name for the value provided to x_param, used for display only. Defaults to 'L'.
+
+            y_param_name : (str, optional)
+                Name for the value provided to y_param, used for display only. Defaults to 'S'.
+
+            cut_id : (int array, optional)
+                Array of cut ids which are either included or excluded. Cuts are in the order they were created. Defaults to [0].
+
+            inc : (int array, optional)
+                Array of 1 or -1 to indicate which cuts include or exclude events. Requires `len(inc) = len(cut_id)`. Defaults to [1].
+
+            visual : (bool, optional)
+                If True a 2D histogram with the included and excluded events is displayed with the cut boundaries. If False nothing is displayed. Defaults to False.
+
+            lims : (2x2 float array, optional)
+                Array of x and y limits for the visual aid 2D histogram. Defaults to [[0, 50000], [0, 1]].
+
+            Returns
+            -------
+            x_param_cut : ndarray
+                Array of x_param values for events that passed the cuts applied.
+            
+            y_param_cut : ndarray
+                Array of y_param values for events that passed the cuts applied.
+        """        
         if visual == True:
             fig, ax = plt.subplots()
         # cut_id=cut_id[inc!=0]
