@@ -45,9 +45,7 @@ class read_dat(object):
         self.polygon_cuts = []
         print('init complete')
        
-#--------------------------------------------------------------------------------------------------------------------------------------------------
-# Function to read a single event
-#--------------------------------------------------------------------------------------------------------------------------------------------------
+
     def read_event(self):
         """Reads the next event in the file, starting from the beginning, and returns an array of `event` objects, one for each active channel. If the end of the file is reached, it returns `True`.
 
@@ -84,17 +82,7 @@ class read_dat(object):
 
         return ev
 
-#-----------------------------------------------------------------------------------------------------------------------------------------------------------
-#  Function to read multiple events in the file or whole file 
-#       events: number of events to be read, must be integer, if False, the full file will be read. 
-#       ch:     which channels to read, True reads all active channels, else value must be an array of channel indices (starting from zero) of the ACTIVE ch
-#       output: lst mode output of all parameters if true. if only certain parameters to be read [1,0,0,1,0] where each index represents a different 
-#               parameter. 
-#                   [L, S, (trigger)T us, baseline, pulse height]    
-#       traces: if True traces will be output in lst mode one file per channel. 
-#       cuts: if False no cuts will be selected. else an array of len cuts is expected 1 for include, 0 for ignore, -1 for exclude.
-#                   example: 3 cuts have been added, I want to include cut 1, and remove cut 2 and ignore cut 3 --> [1,-1,0]
-#-----------------------------------------------------------------------------------------------------------------------------------------------------------
+
     def lst_out(self, events=False, ch=True, output=True, traces=False, cuts=False, inc=None, filename=""):
         """Reads a number of events from the file buffer for the channels specified, applying cuts if given. These cuts can be made using `read_dat.add_selections()`. Outputs a csv file for each active channel, containing
 
@@ -212,9 +200,7 @@ class read_dat(object):
                 break
         print('End reading')
 
-#--------------------------------------------------------------------------------------------------------------------------------------------------
-# Function to pull fail information from number of events processed
-#--------------------------------------------------------------------------------------------------------------------------------------------------
+
     def get_fails(self, display=False):
         """Returns an nx5 array of ints, for n channels, in the format of [start, long, short, integral, zero]. The value at the associated index indicates the number of fails out of the processed events that have failed that check. Runs this check for all events processed.
 
@@ -252,14 +238,7 @@ class read_dat(object):
                     print(f'Channel: {self.chActive[i]}\tEvents: {self.eventCounter}\tFails: {self.totFails[i]}\ntstart: {self.fails[i][0]}\ttlong: {self.fails[i][1]}\ttshort: {self.fails[i][2]}\tintegral: {self.fails[i][3]}\tt0: {self.fails[i][4]}')
         return self.fails, self.totFails, self.eventCounter
 
-#--------------------------------------------------------------------------------------------------------------------------------------------------
-# enclosed area selections
-#   a: auto cut 
-#   m: manual with visual aid
-#   p: manual user provided cut co-ordinates
-#   file: input file for previously determined cuts 
-#   L and S: required if mode is m
-#--------------------------------------------------------------------------------------------------------------------------------------------------
+
     def add_selections(self, x_param=[], y_param=[], x_param_name='L', y_param_name='S', mode='m', lims=[[0, 50000], [0, 1]], file=False):
         """Method to add multiple cuts to the events. Can be run in manual `m` or predetermined `p` modes. Manual mode allows the user to input arrays of `x_param` and `y_param` values so that cuts can be made to separate, for example, the neutron and gamma events. Predetermined mode allows the selections to be input from a file provided and no input is needed.
 
@@ -452,12 +431,8 @@ class read_dat(object):
             print(f'Selections outputted to file: {self.fileName[:-4]}_cuts.csv')
 
         return
-###########################################################################################################################################
-# method to return the events which fall within the desired cuts. 
-# cuts need to have been added already to the read_dat object
-#
-#
-###########################################################################################################################################
+
+
     def select_events(self, x_param, y_param, x_param_name='L', y_param_name='S', cut_id=[0], inc=[1], visual=False, lims = [[0, 50000], [0, 1]]):
         """Method to pull the events which fall within the desired area. The area is defined by the inclusion or exclusion of cuts made using `add_selections`. If no selections have been made, then all events will be returned. A visual aid can be shown to aid in understanding which events are included or excluded.
 
@@ -585,8 +560,3 @@ class read_dat(object):
             plt.ylabel(f'{y_param_name} [ch]')
             plt.show(block=True)
         return x_param[mask], y_param[mask]
-
-###########################################################################################################################################
-
-
-
