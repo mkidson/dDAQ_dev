@@ -76,7 +76,7 @@ class read_dat(object):
             y = np.array(np.frombuffer(self.inputFile.read(self.channelSizes[self.chActive[i]]*2), dtype=np.uint16), dtype=int)
             traces[i]=y
             ev.append(event(self.eventCounter, self.chActive[i], self.eventTimeStamp, traces[i], self.CFD, [self.tStart/self.nsPerSample, self.tShort/self.nsPerSample, self.tLong/self.nsPerSample], self.baselineSamples))
-            if ev[i].get_fails() != [0,0,0,0,0]:  # Don't understand this
+            if ev[i].get_fails() != [0,0,0,0,0]:
                 self.totFails[i] += 1
             self.fails[i] = np.add(self.fails[i], ev[i].get_fails())
 
