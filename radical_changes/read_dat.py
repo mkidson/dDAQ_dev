@@ -15,9 +15,6 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as pat
 from scipy.interpolate import interp1d
 import csv
-import multiprocessing as mp
-from queue import Empty
-from time import time
 
 
 # Open file and skip over header preamble
@@ -27,7 +24,7 @@ class read_dat(object):
     maxChannels = 64
     preambleSize = 4+20+4*maxChannels
     
-    def __init__(self, file_name, sample_rate=2, CFD=[0.75, 6, 6], t_start=[-80], t_long=[400], t_short=[10], baseline_samples=200, output=[0,0,0,0,0], num_processes=2): #time parameters in ns
+    def __init__(self, file_name, sample_rate=2, CFD=[0.75, 6, 6], t_start=[-80], t_long=[400], t_short=[10], baseline_samples=200, output=[0,0,0,0,0]): #time parameters in ns
         self.fileName = file_name
         self.inputFile = open(file_name, 'rb')
         self.header = self.inputFile.read(self.headerSize)
@@ -46,9 +43,6 @@ class read_dat(object):
         self.selection = [[],[]]
         self.cuts = []
         self.polygon_cuts = []
-        self.ev_queue = mp.Queue()
-        self.NUM_PROCESSES = num_processes
-        self.queue_finished = False
         print('init complete')
        
 
@@ -61,7 +55,6 @@ class read_dat(object):
                 Array of `event` objects, one for each active channel.
         """
         preamble = np.frombuffer(self.inputFile.read(self.preambleSize), dtype=np.uint32)
-
         if not preamble.any(): #check end of file
             self.end_file = True
             return self.end_file
@@ -83,109 +76,14 @@ class read_dat(object):
             y = np.array(np.frombuffer(self.inputFile.read(self.channelSizes[self.chActive[i]]*2), dtype=np.uint16), dtype=int)
             traces[i]=y
             ev.append(event(self.eventCounter, self.chActive[i], self.eventTimeStamp, traces[i], self.CFD, [self.tStart/self.nsPerSample, self.tShort/self.nsPerSample, self.tLong/self.nsPerSample], self.baselineSamples))
-            if ev[i].get_fails() != [0,0,0,0,0]:
+            if ev[i].get_fails() != [0,0,0,0,0]:  # Don't understand this
                 self.totFails[i] += 1
             self.fails[i] = np.add(self.fails[i], ev[i].get_fails())
 
         return ev
 
 
-    def __read_events_to_queue(self, queue, events, counter):
-        
-        while True:
-            if events > counter or events == False:
-                ev = self.read_event()
-                counter += 1
-                if counter % 1000 == 0:
-                    print(f'{counter} events')
-        
-                if ev == True: #if end of file was reached break read loop
-                    print('End of file reached...')
-                    queue.put(None)
-                    break
-                
-                queue.put(ev)
-            else:
-                queue.put(None)
-                break
-
-
-            
-
-
-
-
-        # region
-        # """Reads the next event in the file, starting from the beginning, and returns an array of `event` objects, one for each active channel. If the end of the file is reached, it returns `True`.
-
-        #     Returns
-        #     -------
-        #     event array
-        #         Array of `event` objects, one for each active channel.
-        # """
-        # preamble = np.frombuffer(self.inputFile.read(self.preambleSize), dtype=np.uint32)
-        # if not preamble.any(): #check end of file
-        #     self.end_file = True
-        #     return self.end_file
-        # #convert timestamp to microseconds
-        # self.eventTimeStamp = preamble[5]*8e-3 #us 
-        # self.channelSizes = preamble[6:]
-        # #array of all channels 0 if that channel isn't active, int value being equal to the 
-        # #number of samples in that active channel
-        # self.chActive = np.argwhere(self.channelSizes > 0).flatten()
-        # # print(self.ch_active)
-        
-
-        # #init trace array
-        # traces = np.empty((len(self.chActive), self.channelSizes[self.chActive[0]]))
-        # self.eventCounter+=1
-        # #read traces for only active channels
-        # ev=[]
-        # for i in range(len(self.chActive)):
-        #     y = np.array(np.frombuffer(self.inputFile.read(self.channelSizes[self.chActive[i]]*2), dtype=np.uint16), dtype=int)
-        #     traces[i]=y
-        #     ev.append(event(self.eventCounter, self.chActive[i], self.eventTimeStamp, traces[i], self.CFD, [self.tStart/self.nsPerSample, self.tShort/self.nsPerSample, self.tLong/self.nsPerSample], self.baselineSamples))
-        #     if ev[i].get_fails() != [0,0,0,0,0]:
-        #         self.totFails[i] += 1
-        #     self.fails[i] = np.add(self.fails[i], ev[i].get_fails())
-        # endregion
-
-
-    def __lst_out_write(self, queue, events, ch, output, traces, cuts, inc, writer_params, writer_trace, out):
-
-        while True:
-            if self.queue_finished == True:
-                break
-            
-            try:
-                ev = queue.get()
-            
-            except Empty:
-                continue
-
-            if ev is None:
-                self.queue_finished = True
-                break
-            else:
-                for i in range(len(ch)):
-
-                    if output != False:
-                        calc_params = np.array([np.array(ev[ch[i]].get_long_integral()), np.array(ev[ch[i]].get_pulse_shape()), ev[ch[i]].get_t0(), ev[ch[i]].get_baseline(), ev[ch[i]].get_pulse_height()[0]])
-                        
-                        if type(cuts) != bool and i == 0:   # checks if there are cuts that need to be made and does them one at a time
-                            # Needs to be this way so we can get a specific number of events
-                            L, S = self.select_events(calc_params[0], calc_params[1], 'L', 'S', cuts, inc, visual=False)
-                            if len(L) == 0:
-                                counter -= 1
-                                return False
-                        writer_params[i].writerow(calc_params[out[i] == 1])
-
-                    if traces == True:
-                        writer_trace[i].writerow(ev[ch[i]].get_trace())
-
-
-
-    def lst_out(self, events=False, ch=True, output=True, traces=False, cuts=False, inc=None, filename="", num_threads=2):
+    def lst_out(self, events=False, ch=True, output=True, traces=False, cuts=False, inc=None, filename=""):
         """Reads a number of events from the file buffer for the channels specified, applying cuts if given. These cuts can be made using `read_dat.add_selections()`. Outputs a csv file for each active channel, containing
 
             Args
@@ -215,9 +113,7 @@ class read_dat(object):
             -------
             Should return nothing. If the arguments are supplied incorrectly, returns None.
         """
-        self.queue_finished = False
         ev = self.read_event()
-        self.ev_queue.put(ev)
         out = []
         writer_trace = []
         writer_params = []
@@ -277,75 +173,33 @@ class read_dat(object):
                 writer_trace[i].writerow(header)
 
         counter = 1
-        #iterate over the desired number of events and write out the traces and other parameters
+        #iterate over the desired number of events and write out the traces and other parameters      
+        while True:
+            for i in range(len(ch)):
+                if output != False:
+                    calc_params = np.array([np.array(ev[ch[i]].get_long_integral()), np.array(ev[ch[i]].get_pulse_shape()), ev[ch[i]].get_t0(), ev[ch[i]].get_baseline(), ev[ch[i]].get_pulse_height()[0]])
+                    
+                    if type(cuts) != bool and i == 0:   # checks if there are cuts that need to be made and does them one at a time
+                        # Needs to be this way so we can get a specific number of events
+                        L, S = self.select_events(calc_params[0], calc_params[1], 'L', 'S', cuts, inc, visual=False)
+                        if len(L) == 0:
+                            counter -= 1
+                            break
+                    writer_params[i].writerow(calc_params[out[i] == 1])
 
-        # read_jobs = []
-        # write_jobs = []
+                if traces == True:
+                    writer_trace[i].writerow(ev[ch[i]].get_trace())
 
-        # for n in range(int(self.NUM_PROCESSES/2)):
-        #     write_process = mp.Process(target=self.__lst_out_write, args=(self.ev_queue, events, ch, output, traces, cuts, inc, writer_params, writer_trace, out,))
-        #     write_jobs.append(write_process)
+            if events > counter or events == False:
+                ev = self.read_event()
+                counter += 1
+                if counter % 1000 == 0:
+                    print(f'{counter} events')
 
-        # for j in write_jobs:
-        #     j.start()
-
-        # # for n in range(int(self.NUM_PROCESSES/2)):
-        # read_process = mp.Process(target=self.__read_events_to_queue, args=(self.ev_queue, events, counter,))
-        # read_process.start()
-        #     # read_jobs.append(read_process)
-        
-
-        # # for j in read_jobs:
-        # #     j.start()
-            
-        # # for j in read_jobs:
-        # #     j.join()
-
-        # for j in write_jobs:
-        #     j.join()
-
-        
-        w1 = time()
-        write_process1 = mp.Process(target=self.__lst_out_write, args=(self.ev_queue, events, ch, output, traces, cuts, inc, writer_params, writer_trace, out,))
-        write_process1.start()
-        w2 = time()
-        # print(f'Time taken to write: {w2-w1} seconds')
-
-        r1 = time()
-        read_process1 = mp.Process(target=self.__read_events_to_queue, args=(self.ev_queue, events, counter,))
-        read_process1.start()
-        r2 = time()
-        # print(f'Time taken to read: {r2-r1} seconds')
-
-        read_process1.join()
-        write_process1.join()
-        # read_process2 = mp.Process(target=self.__read_events_to_queue, args=(self.ev_queue, events, counter,))
-        # read_process2.start()
-
-
-
-        # write_process2 = mp.Process(target=self.__lst_out_write, args=(self.ev_queue, events, ch, output, traces, cuts, inc, writer_params, writer_trace, out,))
-        # write_process2.start()
-
-        # write_process2.join()
-        # read_process2.join()
-
-        # while True:
-        #     for i in range(len(ch)):
-        #         check = self.__lst_out_write(self.ev_queue, events, ch, output, traces, cuts, inc, writer_params, writer_trace, out)
-        #         if check == False:
-        #             break
-
-        #     if events > counter or events == False:
-        #         ev = self.__read_events_to_queue(self.ev_queue)
-        #         counter += 1
-        #         if counter % 1000 == 0:
-        #             print(f'{counter} events')
-
-        #         if ev == True: #if end of file was reached break read loop
-        #             break 
-        #     else:
-        #         break
+                if ev == True: #if end of file was reached break read loop
+                    break 
+            else:
+                break
         print('End reading')
 
 
