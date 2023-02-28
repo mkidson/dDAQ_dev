@@ -8,11 +8,16 @@ import numpy as np
 
 class event(object):
 
-	def __init__(self, event_id, ch, t0, trace, CFD, integrals, baseline):
+	def __init__(self, event_id, active_channels, t0, trace, baseline, integrals, alignment_method, align_args, calculate_integrals=True, compute_fails=True):
 		#init attributes
 		self.eventID = event_id
-		self.ch = ch
+		self.active_channels = active_channels
 		self.triggerTime = t0
+
+		self.shortIntegral = np.zeros(len(integrals[0]))
+		self.longIntegral = np.zeros(len(integrals[0]))
+		self.fails = [0,0,0,0,0] #start, long, short, integral, cfd zero
+
 
 		# self.integralBounds = integrals #time ns
 		self.baseline = np.mean(trace[:baseline])
@@ -20,40 +25,48 @@ class event(object):
 		self.trace = self.baseline-trace
 		self.__check_polarity()
 
-		self.CFD = self.__cfd(*CFD)  
-		self.istart = self.CFD[1] + integrals[0]
-		self.ishort = self.CFD[1] + integrals[1]
-		self.ilong = self.CFD[1] + integrals[2]
-		
-		self.longIntegral = np.array([self.__sum_integral(i) for i in self.ilong])
-		self.shortIntegral = np.array([self.__sum_integral(i) for i in self.ishort])
 
-		if len(self.ilong) == 1:
-			self.longIntegral = self.longIntegral[0]
-		if len(self.ishort) == 1:
-			self.shortIntegral = self.shortIntegral[0]
+		if alignment_method == 'CFD':
+			self.CFD_arr, self.align_pos = self.__cfd(*align_args)
+
+		elif alignment_method == 'max':
+			self.align_pos = np.where(self.trace == np.max(self.trace))[0][0]
+
+		if calculate_integrals == True:
+			self.istart = self.align_pos + integrals[0]
+			self.ishort = self.align_pos + integrals[1]
+			self.ilong = self.align_pos + integrals[2]
+
+			self.longIntegral = np.array([self.__sum_integral(i) for i in self.ilong])
+			self.shortIntegral = np.array([self.__sum_integral(i) for i in self.ishort])
+
+			if len(self.ilong) == 1:
+				self.longIntegral = self.longIntegral[0]
+			if len(self.ishort) == 1:
+				self.shortIntegral = self.shortIntegral[0]
+
 
 		#fails
-		self.fails = [0,0,0,0,0] #start, long, short, integral, cfd zero
-		for i in self.ilong:
-			for j in self.ishort:
-				for k in self.istart:
-					if i > len(self.trace) or i < 0: 
-						self.fails[1] = 1
-						# plt.plot(self.trace)
-						# plt.show()
-						# print(self.longIntegral,self.shortIntegral)
-					if k < 0 or k > len(self.trace): 
-						self.fails[0] = 1
-						# print(self.longIntegral,self.shortIntegral)
-					if j < 0 or j > len(self.trace):
-						self.fails[2] = 1
-						# print(self.longIntegral,self.shortIntegral)
-					if j < 0 or j > i:
-						self.fails[3] = 1
-						# print(self.ch,self.longIntegral,self.shortIntegral)
-						# plt.plot(self.trace)
-						# plt.show()
+		if compute_fails == True:
+			for i in self.ilong:
+				for j in self.ishort:
+					for k in self.istart:
+						if i > len(self.trace) or i < 0: 
+							self.fails[1] = 1
+							# plt.plot(self.trace)
+							# plt.show()
+							# print(self.longIntegral,self.shortIntegral)
+						if k < 0 or k > len(self.trace): 
+							self.fails[0] = 1
+							# print(self.longIntegral,self.shortIntegral)
+						if j < 0 or j > len(self.trace):
+							self.fails[2] = 1
+							# print(self.longIntegral,self.shortIntegral)
+						if j < 0 or j > i:
+							self.fails[3] = 1
+							# print(self.ch,self.longIntegral,self.shortIntegral)
+							# plt.plot(self.trace)
+							# plt.show()
 
 
 
@@ -63,8 +76,8 @@ class event(object):
 #------------------------------------------------------------------
 	def get_event_id(self):
 		return self.eventID
-	def get_ch(self):
-		return self.ch
+	def get_active_channels(self):
+		return self.active_channels
 	def get_t0(self):
 		return self.triggerTime
 	def get_trace(self):
@@ -87,6 +100,10 @@ class event(object):
 				return -1
 			else:
 				return self.shortIntegral / self.longIntegral
+
+	def get_times(self):
+		return self.istart, self.ishort, self.ilong, self.align_pos
+
 #-------------------------------------------------------------------------------------------------------------------------------------------------
 # Pulse height fitting RETURNS MAX at the moment and the index of max as representation for t
 #		if gaussian fitting fails returns max
