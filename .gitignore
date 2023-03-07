@@ -1,5 +1,6 @@
-*.dtz
 *.dat
 *_out.csv
 *_out_gamma.csv
 *_out_neutron.csv
+*.dtz
+./Data/*
