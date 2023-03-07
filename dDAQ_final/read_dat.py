@@ -178,7 +178,7 @@ class read_dat(object):
                 if len(self.tLong) > 1 or len(self.tShort) > 1: # idk what this is doing
                     writer_params[i].writerow([f'long integral (ns): {self.tLong}, short integral (ns): {self.tShort}'])
                 labels = np.array(['L [ch]', 'S[ch]', 'T (trigger) [us]', 'baseline', 'pulse height [bits]'])
-                writer_params[i].writerow(labels[out[i] == 1])
+                writer_params[i].writerow(labels[out == 1])
 
             if traces == True:
                 header = [f'{self.fileName[:-4]} channel {ch[i]}, {events} events, cuts {cuts}']
@@ -202,7 +202,7 @@ class read_dat(object):
                         if len(L) == 0:
                             counter -= 1
                             break
-                    writer_params[i].writerow(calc_params[out[i] == 1])
+                    writer_params[i].writerow(calc_params[out == 1])
 
                 if traces == True:
                     writer_trace[i].writerow(ev[ch[i]].get_trace())
