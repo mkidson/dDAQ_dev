@@ -26,14 +26,14 @@ class event(object):
         self.__check_polarity()
 
 
-        if alignment_method == 'CFD':
-            self.CFD_arr, self.align_pos = self.__cfd(*align_args)
+        if alignment_method == 'CFD_old':
+            self.CFD_arr, self.align_pos = self.__cfd_old(*align_args)
 
         elif alignment_method == 'max':
             self.align_pos = np.where(self.trace == np.max(self.trace))[0][0]
         
-        elif alignment_method == 'fast_CFD':
-            self.CFD_arr, self.align_pos = self.__fast_cfd(*align_args)
+        elif alignment_method == 'CFD':
+            self.CFD_arr, self.align_pos = self.__cfd(*align_args)
 
         if calculate_integrals == True:
             self.istart = self.align_pos + integrals[0]
@@ -125,7 +125,7 @@ class event(object):
 # Constant Fraction Discriminator, requires parameters, y (the trace) F (scaling fraction) L (filter window) O (filter offset) 
 #------------------------------------------------------------------------------------------------------------------------------------------------- 
 
-    def __cfd(self, F, L, O):
+    def __cfd_old(self, F, L, O):
         # F = self.CFD[0]
         # L = self.CFD[1]
         # O = self.CFD[2]
@@ -172,7 +172,7 @@ class event(object):
 
 # Hopefully a faster method of finding the crossover time
 
-    def __fast_cfd(self, frac, offset):
+    def __cfd(self, frac, offset):
 
         # We have one trace scaled down and the other inverted and delayed
         frac_trace = self.trace * frac
