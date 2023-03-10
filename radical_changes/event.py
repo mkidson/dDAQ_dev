@@ -31,6 +31,9 @@ class event(object):
 
         elif alignment_method == 'max':
             self.align_pos = np.where(self.trace == np.max(self.trace))[0][0]
+        
+        elif alignment_method == 'fast_CFD':
+            self.CFD_arr, self.align_pos = self.__fast_cfd(*align_args)
 
         if calculate_integrals == True:
             self.istart = self.align_pos + integrals[0]
@@ -165,6 +168,37 @@ class event(object):
 
 
         return cfdArr, zero_cross
+
+
+# Hopefully a faster method of finding the crossover time
+
+    def __fast_cfd(self, frac, offset):
+
+        # We have one trace scaled down and the other inverted and delayed
+        frac_trace = self.trace * frac
+        delay_trace = np.roll(self.trace, offset)
+
+        # Then subtract one from the other
+        cfd_array = frac_trace - delay_trace
+
+        # If there is only one pulse in the window, this will find the index positions of
+        # the min and max, between which should be the zero crossing event that we care about
+        cfd_array_max_index = np.where(cfd_array == np.max(cfd_array))[0][0]
+        cfd_array_min_index = cfd_array_max_index + np.where(cfd_array[cfd_array_max_index:] == np.min(cfd_array[cfd_array_max_index:]))[0][0]
+
+        zero_cross_index = -1
+
+        try:
+            # We use np.diff to find where the sign of two adjacent points is different and that 
+            # should be the crossing event. We then get the index of that point
+            zero_cross_index = cfd_array_max_index + np.where( np.diff( np.sign( cfd_array[cfd_array_max_index:cfd_array_min_index] ) ) != 0 )[0][0]
+        except:   # This used to only except IndexError but I think this is more general
+            self.fails[4] = 1
+            return cfd_array, -1
+
+
+        return cfd_array, zero_cross_index
+
 
 
 #-------------------------------------------------------------------------------------------------------------------------------------------------

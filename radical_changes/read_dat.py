@@ -178,7 +178,7 @@ class read_dat(object):
                 if len(self.tLong) > 1 or len(self.tShort) > 1: # idk what this is doing
                     writer_params[i].writerow([f'long integral (ns): {self.tLong}, short integral (ns): {self.tShort}'])
                 labels = np.array(['L [ch]', 'S[ch]', 'T (trigger) [us]', 'baseline', 'pulse height [bits]'])
-                writer_params[i].writerow(labels[out == 1])
+                writer_params[i].writerow(labels[out[i] == 1])
 
             if traces == True:
                 header = [f'{self.fileName[:-4]} channel {ch[i]}, {events} events, cuts {cuts}']
@@ -193,16 +193,20 @@ class read_dat(object):
         #iterate over the desired number of events and write out the traces and other parameters      
         while True:
             for i in range(len(ch)):
+                if ev[i].get_fails() != [0,0,0,0,0]:    # If there is any error, we disregard the event
+                    counter -= 1
+                    break
+
                 if output != False:
                     calc_params = np.array([np.array(ev[ch[i]].get_long_integral()), np.array(ev[ch[i]].get_pulse_shape()), ev[ch[i]].get_t0(), ev[ch[i]].get_baseline(), ev[ch[i]].get_pulse_height()[0]])
                     
                     if type(cuts) != bool and i == 0:   # checks if there are cuts that need to be made and does them one at a time
                         # Needs to be this way so we can get a specific number of events
                         L, S = self.select_events(calc_params[0], calc_params[1], 'L', 'S', cuts, inc, visual=False)
-                        if len(L) == 0:
+                        if len(L) == 0: # If L is empty, then the event was excluded
                             counter -= 1
                             break
-                    writer_params[i].writerow(calc_params[out == 1])
+                    writer_params[i].writerow(calc_params[out[i] == 1])
 
                 if traces == True:
                     writer_trace[i].writerow(ev[ch[i]].get_trace())
