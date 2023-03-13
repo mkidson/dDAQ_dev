@@ -16,7 +16,7 @@ class event(object):
 
         self.shortIntegral = np.zeros(len(integrals[0]))
         self.longIntegral = np.zeros(len(integrals[0]))
-        self.fails = [0,0,0,0,0] #start, long, short, integral, cfd zero
+        self.fails = [0,0,0,0,0] #start, long, short, integral, align pos
 
 
         # self.integralBounds = integrals #time ns
@@ -51,25 +51,29 @@ class event(object):
 
         #fails
         if compute_fails == True:
-            for i in self.ilong:
-                for j in self.ishort:
-                    for k in self.istart:
-                        if i > len(self.trace) or i < 0: 
-                            self.fails[1] = 1
-                            # plt.plot(self.trace)
-                            # plt.show()
-                            # print(self.longIntegral,self.shortIntegral)
-                        if k < 0 or k > len(self.trace): 
-                            self.fails[0] = 1
-                            # print(self.longIntegral,self.shortIntegral)
-                        if j < 0 or j > len(self.trace):
-                            self.fails[2] = 1
-                            # print(self.longIntegral,self.shortIntegral)
-                        if j < 0 or j > i:
-                            self.fails[3] = 1
-                            # print(self.ch,self.longIntegral,self.shortIntegral)
-                            # plt.plot(self.trace)
-                            # plt.show()
+            for i in self.istart:
+                if i < 0 or i > len(self.trace): 
+                    # If the start of the integration window is outside the event window, fail
+                    self.fails[0] = 1
+
+            for j in self.ilong:
+                if j > len(self.trace) or j < 0: 
+                    # If the end of the long integral window is outside the event window, fail
+                    self.fails[1] = 1
+
+            for k in self.ishort:
+                if k < 0 or k > len(self.trace):
+                    # If the end of the short integral window is outside the event window, fail
+                    self.fails[2] = 1
+                    
+            if len(self.ilong) == 1:
+                if self.longIntegral < 0 or self.longIntegral < self.shortIntegral:
+                    # If the long integral is less than 0, or the short integral is greater than the long, fail
+                    self.fails[3] = 1
+            else:
+                for l in range(len(self.longIntegral)):
+                    if self.longIntegral[l] < 0 or self.longIntegral[l] < self.shortIntegral[l]:
+                        self.fails[3] = 1
 
 
 
