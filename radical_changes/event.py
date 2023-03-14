@@ -8,11 +8,13 @@ import numpy as np
 
 class event(object):
 
-    def __init__(self, event_id, active_channels, t0, trace, baseline, integrals, alignment_method, align_args, calculate_integrals=True, compute_fails=True):
+    def __init__(self, event_id, active_channels, t0, trace, baseline, integrals, alignment_method, align_args, calculate_integrals=True, compute_fails=True, calibration_m=1, calibration_c=0):
         #init attributes
         self.eventID = event_id
         self.active_channels = active_channels
         self.triggerTime = t0
+        self.calibration_m = calibration_m
+        self.calibration_c = calibration_c
 
         self.shortIntegral = np.zeros(len(integrals[0]))
         self.longIntegral = np.zeros(len(integrals[0]))
@@ -94,9 +96,9 @@ class event(object):
     def get_baseline(self):
         return self.baseline 
     def get_long_integral(self):
-        return self.longIntegral
+        return self.calibration_m * self.longIntegral + self.calibration_c
     def get_short_integral(self):
-        return self.shortIntegral
+        return self.calibration_m * self.shortIntegral + self.calibration_c
     def get_pulse_shape(self):
 
         if  len(self.ilong) > 1 and len(self.ishort) > 1:

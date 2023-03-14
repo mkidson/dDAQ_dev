@@ -24,7 +24,7 @@ class read_dat(object):
     maxChannels = 64
     preambleSize = 4+20+4*maxChannels
     
-    def __init__(self, file_name, sample_rate=2, t_start=[-80], t_long=[400], t_short=[10], baseline_samples=200, output=[0,0,0,0,0], align_method='CFD', align_args=(0.75, 6,)): #time parameters in ns
+    def __init__(self, file_name, sample_rate=2, t_start=[-80], t_long=[400], t_short=[10], baseline_samples=200, output=[0,0,0,0,0], align_method='CFD', align_args=(0.75, 6,), calibration_m=1, calibration_c=0): #time parameters in ns
         self.fileName = file_name
         self.inputFile = open(file_name, 'rb')
         self.header = self.inputFile.read(self.headerSize)
@@ -44,6 +44,8 @@ class read_dat(object):
         self.selection = [[],[]]
         self.cuts = []
         self.polygon_cuts = []
+        self.calibration_m = calibration_m
+        self.calibration_c = calibration_c
         print('init complete')
        
 
@@ -83,7 +85,7 @@ class read_dat(object):
 
             traces[i]=y
             
-            ev.append(event(self.eventCounter, self.chActive[i], self.eventTimeStamp, traces[i], self.baselineSamples, [self.tStart/self.nsPerSample, self.tShort/self.nsPerSample, self.tLong/self.nsPerSample], align_method_read, align_args_read, True, True))
+            ev.append(event(self.eventCounter, self.chActive[i], self.eventTimeStamp, traces[i], self.baselineSamples, [self.tStart/self.nsPerSample, self.tShort/self.nsPerSample, self.tLong/self.nsPerSample], align_method_read, align_args_read, True, True, calibration_m=self.calibration_m, calibration_c=self.calibration_c))
 
             # ev.append(event(self.eventCounter, self.chActive[i], self.eventTimeStamp, traces[i], self.CFD, [self.tStart/self.nsPerSample, self.tShort/self.nsPerSample, self.tLong/self.nsPerSample], self.baselineSamples))
 
