@@ -52,6 +52,14 @@ class read_dat(object):
     def read_event(self, align_method_read=None, align_args_read=None):
         """Reads the next event in the file, starting from the beginning, and returns an array of `event` objects, one for each active channel. If the end of the file is reached, it returns `True`.
 
+            Args
+            ----
+            align_method_read : (None or str, optional)
+                Specifies which pulse alignment method should be used for that event. If None, uses the method specified when the `read_dat` object was initialised. Defaults to None
+
+            align_args_read : (None or float array, optional)
+                Supplies the arguments required for the align method chosen. If None, it uses the arguments supplied to the `read_dat` object. Defaults to None.
+
             Returns
             -------
             event array
@@ -121,6 +129,12 @@ class read_dat(object):
 
             filename : (str, optional)
                 Desired output file name. If left empty, it uses the `file_name` of the original file. Defaults to "".
+            
+            align_method_lst_out : (None or str, optional)
+                Specifies which pulse alignment method should be used for that group of events. If None, uses the method specified when the `read_dat` object was initialised. Defaults to None
+
+            align_args_lst_out : (None or float array, optional)
+                Supplies the arguments required for the align method chosen. If None, it uses the arguments supplied to the `read_dat` object. Defaults to None.
 
             Returns
             -------
@@ -264,7 +278,7 @@ class read_dat(object):
         return self.fails, self.totFails, self.eventCounter
 
 
-    def add_selections(self, x_param=[], y_param=[], x_param_name='L', y_param_name='S', mode='m', lims=[[0, 50000], [0, 1]], file=False):
+    def add_selections(self, x_param=[], y_param=[], x_param_name='L', y_param_name='S', mode='m', lims=None, file=False):
         """Method to add multiple cuts to the events. Can be run in manual `m` or predetermined `p` modes. Manual mode allows the user to input arrays of `x_param` and `y_param` values so that cuts can be made to separate, for example, the neutron and gamma events. Predetermined mode allows the selections to be input from a file provided and no input is needed.
 
             Args
@@ -284,8 +298,8 @@ class read_dat(object):
             mode : (str, optional)
                 Character specifying mode of operation. 'm' is manual mode, where x_param and y_param arrays are required so selections can be made visually on a 2d histogram. 'p' is predetermined mode, where cuts are created from selections obtained from `file`. Defaults to 'm'.
 
-            lims : (2x2 float array, optional)
-                Array of x and y limits for the visual aid 2d histogram. Defaults to [[0, 50000], [0, 1]].
+            lims : (None or 2x2 float array, optional)
+                Array of x and y limits for the visual aid 2d histogram. If None, sets to [[0, 50000], [0, 1]] and scales the 50000 by the calibration numbers supplied. Defaults to None.
 
             file : (bool or str, optional)
                 Specifies the input file to be used when in predetermined mode. If False when mode='p', it will request the file as input. Defaults to False.
@@ -316,6 +330,10 @@ class read_dat(object):
         - If you want to export the selection so it can be used again later, press "o".
         - Finally press "q" to quit.
         """
+        if lims == None:
+            lims = [[0, 50000*self.calibration_m + self.calibration_c], [0, 1]]
+
+
         if mode == 'm':
             if len(x_param) == 0 or len(y_param) == 0:  # checking if there were arrays input, otherwise it doesn't work
                 print('ERROR: No x_param and y_param values recieved. x_param and y_param values required for manual cut mode. Returning None.')
@@ -462,7 +480,7 @@ class read_dat(object):
         return
 
 
-    def select_events(self, x_param, y_param, x_param_name='L', y_param_name='S', cut_id=[0], inc=[1], visual=False, lims = [[0, 50000], [0, 1]]):
+    def select_events(self, x_param, y_param, x_param_name='L', y_param_name='S', cut_id=[0], inc=[1], visual=False, lims=None):
         """Method to pull the events which fall within the desired area. The area is defined by the inclusion or exclusion of cuts made using `add_selections`. If no selections have been made, then all events will be returned. A visual aid can be shown to aid in understanding which events are included or excluded.
 
             Args
@@ -488,8 +506,8 @@ class read_dat(object):
             visual : (bool, optional)
                 If True a 2D histogram with the included and excluded events is displayed with the cut boundaries. If False nothing is displayed. Defaults to False.
 
-            lims : (2x2 float array, optional)
-                Array of x and y limits for the visual aid 2D histogram. Defaults to [[0, 50000], [0, 1]].
+            lims : (None or 2x2 float array, optional)
+                Array of x and y limits for the visual aid 2d histogram. If None, sets to [[0, 50000], [0, 1]] and scales the 50000 by the calibration numbers supplied. Defaults to None.
 
             Returns
             -------
@@ -498,7 +516,10 @@ class read_dat(object):
             
             y_param_cut : ndarray
                 Array of y_param values for events that passed the cuts applied.
-        """        
+        """    
+        if lims == None:
+            lims = [[0, 50000*self.calibration_m + self.calibration_c], [0, 1]]
+
         if visual == True:  # creating the subplots now with a check or else there were millions produced when doing lst_out
             fig, ax = plt.subplots()
 
