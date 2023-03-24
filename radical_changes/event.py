@@ -75,6 +75,7 @@ class event(object):
             else:
                 for l in range(len(self.longIntegral)):
                     if self.longIntegral[l] < 0 or self.longIntegral[l] < self.shortIntegral[l]:
+                        # Same thing but for mulitple long integrals per event
                         self.fails[3] = 1
 
 
