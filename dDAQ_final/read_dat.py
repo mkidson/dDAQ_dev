@@ -350,7 +350,7 @@ class read_dat(object):
                     plt.xlabel(f'{x_param_name} [ch]')
                     plt.ylabel(f'{y_param_name} [ch]')
 
-                    plt.legend(title='a: Start new selection\nu: Undo previous point\nx: End current selection\nd: Delete previous selection\no: Output selections to file\nq: Quit', loc='lower right')
+                    plt.legend(title='a: Start new selection\nu: Undo previous point\nx: End current selection\nd: Delete previous selection\no: Output selections to file\nq: Quit', loc='lower right', frameon=False, framealpha=0)
 
                     cip = fig.canvas.mpl_connect('key_press_event', self.__press)
                     plt.show(block=True)
