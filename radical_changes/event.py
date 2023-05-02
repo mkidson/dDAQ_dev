@@ -190,8 +190,10 @@ class event(object):
 
         # If there is only one pulse in the window, this will find the index positions of
         # the min and max, between which should be the zero crossing event that we care about
-        cfd_array_max_index = np.where(cfd_array == np.max(cfd_array))[0][0]
-        cfd_array_min_index = cfd_array_max_index + np.where(cfd_array[cfd_array_max_index:] == np.min(cfd_array[cfd_array_max_index:]))[0][0]
+        # cfd_array_max_index = np.where(cfd_array == np.max(cfd_array))[0][0]
+        cfd_array_max_index = np.argmax(cfd_array)[0]
+        # cfd_array_min_index = cfd_array_max_index + np.where(cfd_array[cfd_array_max_index:] == np.min(cfd_array[cfd_array_max_index:]))[0][0]
+        cfd_array_min_index = cfd_array_max_index + np.argmin(cfd_array[cfd_array_max_index:])[0]
 
         zero_cross_index = -1
 

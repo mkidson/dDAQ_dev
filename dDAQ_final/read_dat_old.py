@@ -24,7 +24,7 @@ class read_dat(object):
     maxChannels = 64
     preambleSize = 4+20+4*maxChannels
     
-    def __init__(self, file_name, sample_rate=2, t_start=-80, t_long=400, t_short=10, baseline_samples=200, output=[0,0,0,0,0], align_method='CFD', align_args=(0.75, 6,), calibration_m=1, calibration_c=0): #time parameters in ns
+    def __init__(self, file_name, sample_rate=2, t_start=[-80], t_long=[400], t_short=[10], baseline_samples=200, output=[0,0,0,0,0], align_method='CFD', align_args=(0.75, 6,), calibration_m=1, calibration_c=0): #time parameters in ns
         self.fileName = file_name
         self.inputFile = open(file_name, 'rb')
         self.header = self.inputFile.read(self.headerSize)
@@ -34,10 +34,9 @@ class read_dat(object):
         self.nsPerSample = sample_rate
         self.align_method = align_method
         self.align_args = align_args
-        self.tStart = t_start
-        self.tShort = t_short
-        self.tLong = t_long
-        self.integrals = [self.tStart, self.tShort, self.tLong]
+        self.tStart = np.array(t_start)
+        self.tShort = np.array(t_short)
+        self.tLong = np.array(t_long)
         self.chActive = np.zeros(8)
         self.fails = np.zeros((len(self.chActive),5))#start, long, short, integral, zero
         self.totFails = np.zeros(len(self.chActive))
@@ -50,7 +49,7 @@ class read_dat(object):
         print('init complete')
        
 
-    def read_event(self, align_method_read=None, align_args_read=None, integrals=None):
+    def read_event(self, align_method_read=None, align_args_read=None):
         """Reads the next event in the file, starting from the beginning, and returns an array of `event` objects, one for each active channel. If the end of the file is reached, it returns `True`.
 
             Args
@@ -70,8 +69,6 @@ class read_dat(object):
             align_method_read = self.align_method
         if align_args_read == None:
             align_args_read = self.align_args
-        if integrals == None:
-            integrals = self.integrals
 
         preamble = np.frombuffer(self.inputFile.read(self.preambleSize), dtype=np.uint32)
         if not preamble.any(): #check end of file
@@ -96,7 +93,7 @@ class read_dat(object):
 
             traces[i]=y
             
-            ev.append(event(self.eventCounter, self.chActive[i], self.eventTimeStamp, traces[i], self.baselineSamples, [integrals[0]/self.nsPerSample, integrals[1]/self.nsPerSample, integrals[2]/self.nsPerSample], align_method_read, align_args_read, True, True, calibration_m=self.calibration_m, calibration_c=self.calibration_c))
+            ev.append(event(self.eventCounter, self.chActive[i], self.eventTimeStamp, traces[i], self.baselineSamples, [self.tStart/self.nsPerSample, self.tShort/self.nsPerSample, self.tLong/self.nsPerSample], align_method_read, align_args_read, True, True, calibration_m=self.calibration_m, calibration_c=self.calibration_c))
 
             # ev.append(event(self.eventCounter, self.chActive[i], self.eventTimeStamp, traces[i], self.CFD, [self.tStart/self.nsPerSample, self.tShort/self.nsPerSample, self.tLong/self.nsPerSample], self.baselineSamples))
 
@@ -107,7 +104,7 @@ class read_dat(object):
         return ev
 
 
-    def lst_out(self, events=False, ch=True, output=True, traces=False, cuts=False, inc=None, filename="", align_method_lst_out=None, align_args_lst_out=None, integrals=None):
+    def lst_out(self, events=False, ch=True, output=True, traces=False, cuts=False, inc=None, filename="", align_method_lst_out=None, align_args_lst_out=None):
         """Reads a number of events from the file buffer for the channels specified, applying cuts if given. These cuts can be made using `read_dat.add_selections()`. Outputs a csv file for each active channel, containing
 
             Args
@@ -147,11 +144,9 @@ class read_dat(object):
             align_method_lst_out = self.align_method
         if align_args_lst_out == None:
             align_args_lst_out = self.align_args
-        if integrals == None:
-            integrals = self.integrals
 
 
-        ev = self.read_event(align_method_read=align_method_lst_out, align_args_read=align_args_lst_out, integrals=integrals)
+        ev = self.read_event(align_method_read=align_method_lst_out, align_args_read=align_args_lst_out)
         out = []
         writer_trace = []
         writer_params = []
@@ -196,8 +191,8 @@ class read_dat(object):
                     f = open(filename, 'w', newline='')
                 writer_params.append(csv.writer(f))
                 writer_params[i].writerow(header)
-                # if len(self.tLong) > 1 or len(self.tShort) > 1: # idk what this is doing
-                #     writer_params[i].writerow([f'long integral (ns): {self.tLong}, short integral (ns): {self.tShort}'])
+                if len(self.tLong) > 1 or len(self.tShort) > 1: # idk what this is doing
+                    writer_params[i].writerow([f'long integral (ns): {self.tLong}, short integral (ns): {self.tShort}'])
                 labels = np.array(['L [ch]', 'S[ch]', 'T (trigger) [us]', 'baseline', 'pulse height [bits]'])
                 writer_params[i].writerow(labels[out[i] == 1])
 
@@ -354,9 +349,8 @@ class read_dat(object):
                     plt.colorbar()
                     plt.xlabel(f'{x_param_name} [ch]')
                     plt.ylabel(f'{y_param_name} [ch]')
-                    
-                    plt.legend(title='a: Start new selection\nu: Undo previous point\nx: End current selection\nd: Delete previous selection\no: Output selections to file\nq: Quit', loc='lower right', frameon=False, framealpha=0)
 
+                    plt.legend(title='a: Start new selection\nu: Undo previous point\nx: End current selection\nd: Delete previous selection\no: Output selections to file\nq: Quit', loc='lower right', frameon=False, framealpha=0)
 
                     cip = fig.canvas.mpl_connect('key_press_event', self.__press)
                     plt.show(block=True)

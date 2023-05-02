@@ -4,3 +4,4 @@
 *_out_neutron.csv
 *.dtz
 ./Data/*
+*_params_0.csv
