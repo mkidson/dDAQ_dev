@@ -49,6 +49,16 @@ class read_dat(object):
         self.calibration_c = calibration_c
         print('init complete')
        
+    def reinitialise_file(self):
+        self.inputFile.close()
+
+        self.inputFile = open(self.fileName, 'rb')
+        self.header = self.inputFile.read(self.headerSize)
+        self.endFile = False
+        self.fails = np.zeros((len(self.chActive),5))#start, long, short, integral, zero
+        self.totFails = np.zeros(len(self.chActive))
+
+
 
     def read_event(self, align_method_read=None, align_args_read=None, integrals=None):
         """Reads the next event in the file, starting from the beginning, and returns an array of `event` objects, one for each active channel. If the end of the file is reached, it returns `True`.
