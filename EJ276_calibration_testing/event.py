@@ -72,8 +72,9 @@ class event(object):
                 self.fails[2] = 1
                     
             # if len(self.ilong) == 1:
-            if self.longIntegral < 0 or self.longIntegral < self.shortIntegral:
-                # If the long integral is less than 0, or the short integral is greater than the long, fail
+            if self.longIntegral < 0:# or self.longIntegral < self.shortIntegral:
+                # If the long integral is less than 0, then fail
+                # also possible to include the long integral being smaller than the short but that sometimes has issues
                 self.fails[3] = 1
             # else:
             #     for l in range(len(self.longIntegral)):
