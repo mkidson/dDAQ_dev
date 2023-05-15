@@ -360,7 +360,7 @@ class read_dat(object):
                 else:
                     fig = plt.figure(1)
                     cmap_r = cm.get_cmap('Blues_r')
-                    plt.hist2d(x_param, y_param, [256,256], lims, norm=colors.LogNorm(vmin=1), cmap=cmap_r)
+                    plt.hist2d(x_param, y_param, [512,512], lims, norm=colors.LogNorm(vmin=1), cmap=cmap_r)
                     plt.colorbar()
                     plt.xlabel(f'{x_param_name} [ch]')
                     plt.ylabel(f'{y_param_name} [ch]')
@@ -574,10 +574,10 @@ class read_dat(object):
             cmap_b, cmap_r = cm.get_cmap('Blues_r'), cm.get_cmap('Reds_r')
             plt.title('Cut Check')
             if x_param[mask] != []:
-                plt.hist2d(x_param[mask], y_param[mask], [256,256], lims, norm=colors.LogNorm(vmin=1), cmap=cmap_r)
+                plt.hist2d(x_param[mask], y_param[mask], [512,512], lims, norm=colors.LogNorm(vmin=1), cmap=cmap_r)
                 plt.colorbar(label='Included Events [Counts]', pad=0.1, shrink=0.5, anchor=(0.0, 0.5))
             if x_param[~mask] != []:
-                plt.hist2d(x_param[~mask], y_param[~mask], [256,256], lims, norm=colors.LogNorm(vmin=1), cmap=cmap_b)
+                plt.hist2d(x_param[~mask], y_param[~mask], [512,512], lims, norm=colors.LogNorm(vmin=1), cmap=cmap_b)
                 plt.colorbar(label='Excluded Events [Counts]', shrink=0.5)
 
             plt.xlabel(f'{x_param_name} [ch]')
