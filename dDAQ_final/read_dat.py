@@ -358,7 +358,7 @@ class read_dat(object):
                     print('ERROR: x_param and y_param need to be the same length. Returning None')
                     return None
                 else:
-                    fig = plt.figure(1)
+                    fig = plt.figure(999)
                     cmap_r = cm.get_cmap('Blues_r')
                     plt.hist2d(x_param, y_param, [512,512], lims, norm=colors.LogNorm(vmin=1), cmap=cmap_r)
                     plt.colorbar()
