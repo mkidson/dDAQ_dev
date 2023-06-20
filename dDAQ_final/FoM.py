@@ -15,11 +15,11 @@ def FoM(L, S, L_slice_size, start_energy, cutoff_energy):
     S_bins_for_plot = S_bins[:-1]
 
 
-    FoMs = np.zeros(len(L_slice_edges))
+    FoMs = np.zeros(len(L_slice_edges)-1)
 
-    for i in range(len(L_slice_edges)):
+    for i in range(len(L_slice_edges)-1):
+        fit_hist = np.histogram(S[(L >= L_slice_edges[i]) & (L < L_slice_edges[i+1])], bins=S_bins)
         try:
-            fit_hist = np.histogram(S[(L >= L_slice_edges[i]) & (L < L_slice_edges[i+1])], bins=S_bins)
             popt, pcov = curve_fit(two_gaussians, S_bins_for_plot, fit_hist[0], [0.5, 0.1, 100, 0.6, 0.1, 100])
         except RuntimeError as r:
             print(r)
