@@ -18,7 +18,6 @@ def FoM(L, S, L_slice_size, start_energy, cutoff_energy):
     FoMs = np.zeros(len(L_slice_edges))
 
     for i in range(len(L_slice_edges)):
-        print(L_slice_edges[i])
         try:
             fit_hist = np.histogram(S[(L >= L_slice_edges[i]) & (L < L_slice_edges[i+1])], bins=S_bins)
             popt, pcov = curve_fit(two_gaussians, S_bins_for_plot, fit_hist[0], [0.5, 0.1, 100, 0.6, 0.1, 100])
