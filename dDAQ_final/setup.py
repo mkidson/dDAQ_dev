@@ -7,5 +7,5 @@ setup(name='read_dat',
       description='read_dat',
       author='Miles Kidson',
       author_email='kdsmil001@myuct.ac.za',
-      py_modules=['read_dat', 'event']
+      py_modules=['read_dat', 'event', 'FoM']
      )
