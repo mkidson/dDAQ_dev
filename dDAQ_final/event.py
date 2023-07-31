@@ -97,7 +97,7 @@ class event(object):
     def get_trace(self):
         return self.trace 
     def get_CFD(self):
-        return self.CFD
+        return self.CFD_arr
     def get_baseline(self):
         return self.baseline 
     def get_long_integral(self):
