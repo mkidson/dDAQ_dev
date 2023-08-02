@@ -23,6 +23,7 @@ class event(object):
 
         # self.integralBounds = integrals #time ns
         self.baseline = np.mean(trace[:baseline])
+        self.baseline_bits = baseline
 
         self.trace = self.baseline-trace
         self.__check_polarity()
@@ -143,9 +144,19 @@ class event(object):
             print(cfd_list[0] - cfd_list[i+1])
             trace_list[i+1] = np.roll(trace_list[i+1], cfd_list[0] - cfd_list[i+1])
         
-        geometric_mean_trace = np.power(np.prod(trace_list, axis=0), 1/len(trace_list))
+        geometric_mean_trace = np.nan_to_num(np.power(np.prod(trace_list, axis=0), 1/len(trace_list)))
 
-        return geometric_mean_trace, trace_list    
+        baseline_geo = np.mean(geometric_mean_trace[:self.baseline_bits])
+        geometric_mean_trace = geometric_mean_trace - baseline_geo
+
+        L_geo = np.sum(geometric_mean_trace[int(self.istart):int(self.ilong)])
+        S_geo = np.sum(geometric_mean_trace[int(self.istart):int(self.ishort)]) / L_geo
+
+        T_trigger_geo = self.triggerTime
+
+        pulse_height_geo = np.max(geometric_mean_trace)
+
+        return geometric_mean_trace, L_geo, S_geo, T_trigger_geo, baseline_geo, pulse_height_geo    
 
 #-------------------------------------------------------------------------------------------------------------------------------------------------
 # Constant Fraction Discriminator, requires parameters, y (the trace) F (scaling fraction) L (filter window) O (filter offset) 
