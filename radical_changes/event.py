@@ -141,7 +141,6 @@ class event(object):
             cfd_list.append(self.__cfd_with_trace_input(self.align_args[0], self.align_args[1], tr)[1])
         
         for i in range(len(trace_list[1:])):
-            print(cfd_list[0] - cfd_list[i+1])
             trace_list[i+1] = np.roll(trace_list[i+1], cfd_list[0] - cfd_list[i+1])
         
         geometric_mean_trace = np.nan_to_num(np.power(np.prod(trace_list, axis=0), 1/len(trace_list)))
