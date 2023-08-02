@@ -27,6 +27,8 @@ class event(object):
         self.trace = self.baseline-trace
         self.__check_polarity()
 
+        self.align_args = align_args
+
 
         if alignment_method == 'CFD_old':
             self.CFD_arr, self.align_pos = self.__cfd_old(*align_args)
@@ -132,6 +134,19 @@ class event(object):
                 print(f'Event {self.eventID} Fails: {np.sum(self.fails)} fails\ntstart: {self.fails[0]}\ttlong: {self.fails[1]}\ttshort: {self.fails[2]}\tintegral: {self.fails[3]}\tt0: {self.fails[4]}')
         return self.fails
 
+    def get_geometric_mean_trace(self, trace_list):
+        cfd_list = []
+        for tr in trace_list:
+            cfd_list.append(self.__cfd_with_trace_input(self.align_args[0], self.align_args[1], tr)[1])
+        
+        for i in range(len(trace_list[1:])):
+            print(cfd_list[0] - cfd_list[i+1])
+            trace_list[i+1] = np.roll(trace_list[i+1], cfd_list[0] - cfd_list[i+1])
+        
+        geometric_mean_trace = np.power(np.prod(trace_list, axis=0), 1/len(trace_list))
+
+        return geometric_mean_trace, trace_list    
+
 #-------------------------------------------------------------------------------------------------------------------------------------------------
 # Constant Fraction Discriminator, requires parameters, y (the trace) F (scaling fraction) L (filter window) O (filter offset) 
 #------------------------------------------------------------------------------------------------------------------------------------------------- 
@@ -212,6 +227,34 @@ class event(object):
 
         return cfd_array, zero_cross_index
 
+    def __cfd_with_trace_input(self, frac, offset, trace):
+
+        # We have one trace scaled down and the other inverted and delayed
+        frac_trace = trace * frac
+        delay_trace = np.roll(trace, offset)
+
+        # Then subtract one from the other
+        cfd_array = frac_trace - delay_trace
+
+        # If there is only one pulse in the window, this will find the index positions of
+        # the min and max, between which should be the zero crossing event that we care about
+        # cfd_array_max_index = np.where(cfd_array == np.max(cfd_array))[0][0]
+        cfd_array_max_index = np.argmax(cfd_array)
+        # cfd_array_min_index = cfd_array_max_index + np.where(cfd_array[cfd_array_max_index:] == np.min(cfd_array[cfd_array_max_index:]))[0][0]
+        cfd_array_min_index = cfd_array_max_index + np.argmin(cfd_array[cfd_array_max_index:])
+
+        zero_cross_index = -1
+
+        try:
+            # We use np.diff to find where the sign of two adjacent points is different and that 
+            # should be the crossing event. We then get the index of that point
+            zero_cross_index = cfd_array_max_index + np.where( np.diff( np.sign( cfd_array[cfd_array_max_index:cfd_array_min_index] ) ) != 0 )[0][0]
+        except:   # This used to only except IndexError but I think this is more general
+            self.fails[4] = 1
+            return cfd_array, -1
+
+
+        return cfd_array, zero_cross_index
 
 
 #-------------------------------------------------------------------------------------------------------------------------------------------------

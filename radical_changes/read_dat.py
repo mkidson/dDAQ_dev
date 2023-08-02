@@ -24,7 +24,7 @@ class read_dat(object):
     maxChannels = 64
     preambleSize = 4+20+4*maxChannels
     
-    def __init__(self, file_name, sample_rate=2, t_start=[-80], t_long=[400], t_short=[10], baseline_samples=200, output=[0,0,0,0,0], align_method='CFD', align_args=(0.75, 6,), calibration_m=1, calibration_c=0): #time parameters in ns
+    def __init__(self, file_name, sample_rate=2, t_start=-80, t_long=400, t_short=10, baseline_samples=200, output=[0,0,0,0,0], align_method='CFD', align_args=(0.75, 6,), calibration_m=1, calibration_c=0): #time parameters in ns
         self.fileName = file_name
         self.inputFile = open(file_name, 'rb')
         self.header = self.inputFile.read(self.headerSize)
@@ -34,9 +34,10 @@ class read_dat(object):
         self.nsPerSample = sample_rate
         self.align_method = align_method
         self.align_args = align_args
-        self.tStart = np.array(t_start)
-        self.tShort = np.array(t_short)
-        self.tLong = np.array(t_long)
+        self.tStart = t_start
+        self.tShort = t_short
+        self.tLong = t_long
+        self.integrals = [self.tStart, self.tShort, self.tLong]
         self.chActive = np.zeros(8)
         self.fails = np.zeros((len(self.chActive),5))#start, long, short, integral, zero
         self.totFails = np.zeros(len(self.chActive))
@@ -48,8 +49,18 @@ class read_dat(object):
         self.calibration_c = calibration_c
         print('init complete')
        
+    def reinitialise_file(self):
+        self.inputFile.close()
 
-    def read_event(self, align_method_read=None, align_args_read=None):
+        self.inputFile = open(self.fileName, 'rb')
+        self.header = self.inputFile.read(self.headerSize)
+        self.endFile = False
+        self.fails = np.zeros((len(self.chActive),5))#start, long, short, integral, zero
+        self.totFails = np.zeros(len(self.chActive))
+
+
+
+    def read_event(self, align_method_read=None, align_args_read=None, integrals=None):
         """Reads the next event in the file, starting from the beginning, and returns an array of `event` objects, one for each active channel. If the end of the file is reached, it returns `True`.
 
             Args
@@ -69,6 +80,8 @@ class read_dat(object):
             align_method_read = self.align_method
         if align_args_read == None:
             align_args_read = self.align_args
+        if integrals == None:
+            integrals = self.integrals
 
         preamble = np.frombuffer(self.inputFile.read(self.preambleSize), dtype=np.uint32)
         if not preamble.any(): #check end of file
@@ -93,7 +106,7 @@ class read_dat(object):
 
             traces[i]=y
             
-            ev.append(event(self.eventCounter, self.chActive[i], self.eventTimeStamp, traces[i], self.baselineSamples, [self.tStart/self.nsPerSample, self.tShort/self.nsPerSample, self.tLong/self.nsPerSample], align_method_read, align_args_read, True, True, calibration_m=self.calibration_m, calibration_c=self.calibration_c))
+            ev.append(event(self.eventCounter, self.chActive[i], self.eventTimeStamp, traces[i], self.baselineSamples, [integrals[0]/self.nsPerSample, integrals[1]/self.nsPerSample, integrals[2]/self.nsPerSample], align_method_read, align_args_read, True, True, calibration_m=self.calibration_m, calibration_c=self.calibration_c))
 
             # ev.append(event(self.eventCounter, self.chActive[i], self.eventTimeStamp, traces[i], self.CFD, [self.tStart/self.nsPerSample, self.tShort/self.nsPerSample, self.tLong/self.nsPerSample], self.baselineSamples))
 
@@ -103,8 +116,124 @@ class read_dat(object):
 
         return ev
 
+    # def lst_out_geometric_mean(self, events=False, ch=True, output=True, traces=False, cuts=False, inc=None, filename="", align_method_lst_out=None, align_args_lst_out=None):
 
-    def lst_out(self, events=False, ch=True, output=True, traces=False, cuts=False, inc=None, filename="", align_method_lst_out=None, align_args_lst_out=None):
+    #     if align_method_lst_out == None:
+    #         align_method_lst_out = self.align_method
+    #     if align_args_lst_out == None:
+    #         align_args_lst_out = self.align_args
+
+
+    #     ev = self.read_event(align_method_read=align_method_lst_out, align_args_read=align_args_lst_out)
+    #     out = []
+    #     writer_trace = []
+    #     writer_params = []
+    #     if ch == True:
+    #         ch = np.arange(len(ev))
+    #     elif ch == False:
+    #         print('ERROR: ch must either be True or an array of ints. Returning None')
+    #         return None
+    #     if output != False:
+    #         if output == True:
+    #             for i in range(len(ch)):
+    #                 out.append([1,1,1,1,1])
+    #         else:
+    #             out = output
+    #     else:
+    #         for i in range(len(ch)):
+    #             out.append([0,0,0,0,0])
+
+    #     out = np.array(out)
+    #     if cuts != False:
+    #         if cuts == True:
+    #             print('Please input an array if you want to apply cuts. Defaulting to no cuts')
+    #         else:
+    #             cuts = np.array(cuts)
+    #             if inc == None: # Setting inc to all 1, so all included
+    #                 inc = np.ones(len(cuts))
+    #             elif len(inc) != len(cuts):
+    #                 print('ERROR: len(inc) must be the same as len(cuts). Returning None')
+    #                 return None
+    #             else:
+    #                 inc = np.array(inc)
+
+    #     trace_list = [ev[i].get_trace() for i in ch]
+    #     trace_geometric_mean = np.power(np.prod(trace_list), 1/len(ch))
+
+    #     # initiate the output files for the traces and other parameters, one per channel
+    #     # only doing the headers now, no data yet
+    #     for i in range(len(ch)):
+    #         if output != False:
+    #             header = [f'{self.fileName[:-4]} channel {ch[i]}, {events} events, cuts {cuts}']
+    #             if len(filename)==0:
+    #                 f = open(f'{self.fileName[:-4]}_params_{ch[i]}.csv', 'w', newline='')
+    #             else:
+    #                 f = open(filename, 'w', newline='')
+    #             writer_params.append(csv.writer(f))
+    #             writer_params[i].writerow(header)
+    #             if len(self.tLong) > 1 or len(self.tShort) > 1: # idk what this is doing
+    #                 writer_params[i].writerow([f'long integral (ns): {self.tLong}, short integral (ns): {self.tShort}'])
+    #             labels = np.array(['L [ch]', 'S[ch]', 'T (trigger) [us]', 'baseline', 'pulse height [bits]'])
+    #             writer_params[i].writerow(labels[out[i] == 1])
+
+    #         if traces == True:
+    #             header = [f'{self.fileName[:-4]} channel {ch[i]}, {events} events, cuts {cuts}']
+    #             f = open(f'{self.fileName[:-4]}_trace_{ch[i]}.csv', 'w', newline='')
+    #             # create the csv writer
+    #             writer_trace.append(csv.writer(f))
+
+    #             # write a header to the csv file
+    #             writer_trace[i].writerow(header)
+        
+    #     # make a csv for the geometric mean stuff
+    #         if len(filename)==0:
+    #             f = open(f'{self.fileName[:-4]}_params_geo_mean.csv', 'w', newline='')
+    #         else:
+    #             f = open(filename, 'w', newline='')
+    #         writer_params.append(csv.writer(f))
+    #         writer_params[i].writerow(header)
+    #         if len(self.tLong) > 1 or len(self.tShort) > 1: # idk what this is doing
+    #             writer_params[i].writerow([f'long integral (ns): {self.tLong}, short integral (ns): {self.tShort}'])
+    #         labels = np.array(['L [ch]', 'S[ch]', 'T (trigger) [us]', 'baseline', 'pulse height [bits]'])
+    #         writer_params[i].writerow(labels[out[i] == 1])
+
+    #     counter = 1
+    #     #iterate over the desired number of events and write out the traces and other parameters      
+    #     while True:
+    #         for i in range(len(ch)):
+    #             if ev[i].get_fails() != [0,0,0,0,0]:    # If there is any error, we disregard the event
+    #                 counter -= 1
+    #                 break
+
+    #             if output != False:
+    #                 calc_params = np.array([np.array(ev[ch[i]].get_long_integral()), np.array(ev[ch[i]].get_pulse_shape()), ev[ch[i]].get_t0(), ev[ch[i]].get_baseline(), ev[ch[i]].get_pulse_height()[0]])
+                    
+    #                 if type(cuts) != bool and i == 0:   # checks if there are cuts that need to be made and does them one at a time
+    #                     # Needs to be this way so we can get a specific number of events
+    #                     L, S = self.select_events(calc_params[0], calc_params[1], 'L', 'S', cuts, inc, visual=False)
+    #                     if len(L) == 0: # If L is empty, then the event was excluded
+    #                         counter -= 1
+    #                         break
+    #                 writer_params[i].writerow(calc_params[out[i] == 1])
+
+    #             if traces == True:
+    #                 writer_trace[i].writerow(ev[ch[i]].get_trace())
+
+    #         if events > counter or events == False:
+    #             ev = self.read_event(align_method_read=align_method_lst_out, align_args_read=align_args_lst_out)
+    #             counter += 1
+    #             if counter % 1000 == 0:
+    #                 print(f'{counter} events')
+
+    #             if ev == True: #if end of file was reached break read loop
+    #                 break 
+    #         else:
+    #             break
+    #     print('End reading')
+
+
+
+    def lst_out(self, events=False, ch=True, output=True, traces=False, cuts=False, inc=None, filename="", align_method_lst_out=None, align_args_lst_out=None, integrals=None):
         """Reads a number of events from the file buffer for the channels specified, applying cuts if given. These cuts can be made using `read_dat.add_selections()`. Outputs a csv file for each active channel, containing
 
             Args
@@ -144,9 +273,11 @@ class read_dat(object):
             align_method_lst_out = self.align_method
         if align_args_lst_out == None:
             align_args_lst_out = self.align_args
+        if integrals == None:
+            integrals = self.integrals
 
 
-        ev = self.read_event(align_method_read=align_method_lst_out, align_args_read=align_args_lst_out)
+        ev = self.read_event(align_method_read=align_method_lst_out, align_args_read=align_args_lst_out, integrals=integrals)
         out = []
         writer_trace = []
         writer_params = []
@@ -191,8 +322,8 @@ class read_dat(object):
                     f = open(filename, 'w', newline='')
                 writer_params.append(csv.writer(f))
                 writer_params[i].writerow(header)
-                if len(self.tLong) > 1 or len(self.tShort) > 1: # idk what this is doing
-                    writer_params[i].writerow([f'long integral (ns): {self.tLong}, short integral (ns): {self.tShort}'])
+                # if len(self.tLong) > 1 or len(self.tShort) > 1: # idk what this is doing
+                #     writer_params[i].writerow([f'long integral (ns): {self.tLong}, short integral (ns): {self.tShort}'])
                 labels = np.array(['L [ch]', 'S[ch]', 'T (trigger) [us]', 'baseline', 'pulse height [bits]'])
                 writer_params[i].writerow(labels[out[i] == 1])
 
@@ -343,12 +474,16 @@ class read_dat(object):
                     print('ERROR: x_param and y_param need to be the same length. Returning None')
                     return None
                 else:
-                    fig = plt.figure(1)
+                    fig = plt.figure()
                     cmap_r = cm.get_cmap('Blues_r')
-                    plt.hist2d(x_param, y_param, [256,256], lims, norm=colors.LogNorm(vmin=1), cmap=cmap_r)
+                    plt.hist2d(x_param, y_param, [512,512], lims, norm=colors.LogNorm(vmin=1), cmap=cmap_r)
                     plt.colorbar()
                     plt.xlabel(f'{x_param_name} [ch]')
                     plt.ylabel(f'{y_param_name} [ch]')
+                    
+                    plt.legend(title='a: Start new selection\nu: Undo previous point\nx: End current selection\nd: Delete previous selection\no: Output selections to file\nq: Quit', loc='lower right', frameon=False, framealpha=0)
+
+
                     cip = fig.canvas.mpl_connect('key_press_event', self.__press)
                     plt.show(block=True)
 
@@ -555,10 +690,10 @@ class read_dat(object):
             cmap_b, cmap_r = cm.get_cmap('Blues_r'), cm.get_cmap('Reds_r')
             plt.title('Cut Check')
             if x_param[mask] != []:
-                plt.hist2d(x_param[mask], y_param[mask], [256,256], lims, norm=colors.LogNorm(vmin=1), cmap=cmap_r)
+                plt.hist2d(x_param[mask], y_param[mask], [512,512], lims, norm=colors.LogNorm(vmin=1), cmap=cmap_r)
                 plt.colorbar(label='Included Events [Counts]', pad=0.1, shrink=0.5, anchor=(0.0, 0.5))
             if x_param[~mask] != []:
-                plt.hist2d(x_param[~mask], y_param[~mask], [256,256], lims, norm=colors.LogNorm(vmin=1), cmap=cmap_b)
+                plt.hist2d(x_param[~mask], y_param[~mask], [512,512], lims, norm=colors.LogNorm(vmin=1), cmap=cmap_b)
                 plt.colorbar(label='Excluded Events [Counts]', shrink=0.5)
 
             plt.xlabel(f'{x_param_name} [ch]')
