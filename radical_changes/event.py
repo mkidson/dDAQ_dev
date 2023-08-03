@@ -138,7 +138,7 @@ class event(object):
     def get_geometric_mean_trace(self, trace_list):
         cfd_list = []
         for tr in trace_list:
-            cfd_list.append(self.__cfd_with_trace_input(self.align_args[0], self.align_args[1], tr)[1])
+            cfd_list.append(self.__cfd_with_trace_input(self.align_args[0], self.align_args[1], tr-self.baseline)[1])
         
         for i in range(len(trace_list[1:])):
             trace_list[i+1] = np.roll(trace_list[i+1], cfd_list[0] - cfd_list[i+1])
@@ -146,7 +146,7 @@ class event(object):
         geometric_mean_trace = np.nan_to_num(np.power(np.prod(trace_list, axis=0), 1/len(trace_list)))
 
         baseline_geo = np.mean(geometric_mean_trace[:self.baseline_bits])
-        geometric_mean_trace = geometric_mean_trace - baseline_geo
+        geometric_mean_trace = geometric_mean_trace - self.baseline
 
         L_geo = np.sum(geometric_mean_trace[int(self.istart):int(self.ilong)])
         S_geo = np.sum(geometric_mean_trace[int(self.istart):int(self.ishort)]) / L_geo
@@ -230,7 +230,8 @@ class event(object):
             # We use np.diff to find where the sign of two adjacent points is different and that 
             # should be the crossing event. We then get the index of that point
             zero_cross_index = cfd_array_max_index + np.where( np.diff( np.sign( cfd_array[cfd_array_max_index:cfd_array_min_index] ) ) != 0 )[0][0]
-        except:   # This used to only except IndexError but I think this is more general
+        except Exception as err:   # This used to only except IndexError but I think this is more general
+            print(err)
             self.fails[4] = 1
             return cfd_array, -1
 
@@ -259,7 +260,8 @@ class event(object):
             # We use np.diff to find where the sign of two adjacent points is different and that 
             # should be the crossing event. We then get the index of that point
             zero_cross_index = cfd_array_max_index + np.where( np.diff( np.sign( cfd_array[cfd_array_max_index:cfd_array_min_index] ) ) != 0 )[0][0]
-        except:   # This used to only except IndexError but I think this is more general
+        except Exception as err:   # This used to only except IndexError but I think this is more general
+            print(err)
             self.fails[4] = 1
             return cfd_array, -1
 

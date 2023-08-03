@@ -149,9 +149,11 @@ class read_dat(object):
 
         if out_geo != False:
             if out_geo == True:
-                out_geo = [1,1,1,1,1]
+                out_geo = np.array([1,1,1,1,1])
             else:
-                pass
+                out_geo = np.array(out_geo)
+        else:
+            out_geo = np.array([0,0,0,0,0])
 
         if cuts != False:
             if cuts == True:
@@ -239,11 +241,12 @@ class read_dat(object):
                     writer_trace[i].writerow(ev[ch[i]].get_trace())
 
 
-            trace_list = [ev[i].get_trace()+ev[i].get_baseline() for i in ch]
+            trace_list = [ev[i].get_trace()+ev[0].get_baseline() for i in ch]
             # get_geometric_mean_trace must always be called on the first event in the ch list
             # and needs to be supplied with the traces without their baseline subtracted
+            # might need to add the baseline from only one of the traces, so they all have the 
+            # same baseline and the geometric mean makes more sense
             geometric_mean_params = ev[ch[0]].get_geometric_mean_trace(trace_list)
-            # print(geometric_mean_params[1:][1,1,0,0,0])
             geo_writer.writerow(np.array(geometric_mean_params[1:])[out_geo == 1])
 
             if traces == True:
