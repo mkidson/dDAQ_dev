@@ -1,3 +1,4 @@
+FoM.py
 event.py
 read_dat.py
 setup.py
