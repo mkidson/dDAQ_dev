@@ -116,6 +116,158 @@ class read_dat(object):
 
         return ev
 
+    def lst_out_geometric_mean(self, events=False, ch=True, output=True, out_geo=True, traces=False, cuts=False, inc=None, filename="", align_method_lst_out=None, align_args_lst_out=None, integrals=None):
+
+        if align_method_lst_out == None:
+            align_method_lst_out = self.align_method
+        if align_args_lst_out == None:
+            align_args_lst_out = self.align_args
+        if integrals == None:
+            integrals = self.integrals
+
+
+        ev = self.read_event(align_method_read=align_method_lst_out, align_args_read=align_args_lst_out, integrals=integrals)
+        out = []
+        writer_trace = []
+        writer_params = []
+        if ch == True:
+            ch = np.arange(len(ev))
+        elif ch == False:
+            print('ERROR: ch must either be True or an array of ints. Returning None')
+            return None
+        if output != False:
+            if output == True:
+                for i in range(len(ch)):
+                    out.append([1,1,1,1,1])
+            else:
+                out = output
+        else:
+            for i in range(len(ch)):
+                out.append([0,0,0,0,0])
+
+        out = np.array(out)
+
+        if out_geo != False:
+            if out_geo == True:
+                out_geo = np.array([1,1,1,1,1])
+            else:
+                out_geo = np.array(out_geo)
+        else:
+            out_geo = np.array([0,0,0,0,0])
+
+        if cuts != False:
+            if cuts == True:
+                print('Please input an array if you want to apply cuts. Defaulting to no cuts')
+            else:
+                cuts = np.array(cuts)
+                if inc == None: # Setting inc to all 1, so all included
+                    inc = np.ones(len(cuts))
+                elif len(inc) != len(cuts):
+                    print('ERROR: len(inc) must be the same as len(cuts). Returning None')
+                    return None
+                else:
+                    inc = np.array(inc)
+
+
+        # initiate the output files for the traces and other parameters, one per channel
+        # only doing the headers now, no data yet
+        for i in range(len(ch)):
+            if output != False:
+                header = [f'{self.fileName[:-4]} channel {ch[i]}, {events} events, cuts {cuts}']
+                if len(filename)==0:
+                    f = open(f'{self.fileName[:-4]}_params_{ch[i]}.csv', 'w', newline='')
+                else:
+                    f = open(filename, 'w', newline='')
+                writer_params.append(csv.writer(f))
+                writer_params[i].writerow(header)
+                # if len(self.tLong) > 1 or len(self.tShort) > 1: # idk what this is doing
+                #     writer_params[i].writerow([f'long integral (ns): {self.tLong}, short integral (ns): {self.tShort}'])
+                labels = np.array(['L [ch]', 'S[ch]', 'T (trigger) [us]', 'baseline', 'pulse height [bits]'])
+                writer_params[i].writerow(labels[out[i] == 1])
+
+            if traces == True:
+                header = [f'{self.fileName[:-4]} channel {ch[i]}, {events} events, cuts {cuts}']
+                f = open(f'{self.fileName[:-4]}_trace_{ch[i]}.csv', 'w', newline='')
+                # create the csv writer
+                writer_trace.append(csv.writer(f))
+
+                # write a header to the csv file
+                writer_trace[i].writerow(header)
+
+
+
+        # make csv's for the geometric mean stuff
+        if len(filename)==0:
+            f_geo = open(f'{self.fileName[:-4]}_params_geo_mean.csv', 'w', newline='')
+        else:
+            f_geo = open(filename, 'w', newline='')
+        geo_writer = csv.writer(f_geo)
+        header_geo = [f'{self.fileName[:-4]} geometric mean, {events} events, cuts {cuts}']
+        geo_writer.writerow(header_geo)
+
+        # if len(self.tLong) > 1 or len(self.tShort) > 1: # idk what this is doing
+        #     geo_writer.writerow([f'long integral (ns): {self.tLong}, short integral (ns): {self.tShort}'])
+        labels = np.array(['L [ch]', 'S[ch]', 'T (trigger) [us]', 'baseline', 'pulse height [bits]'])
+        geo_writer.writerow(labels[out_geo == 1])
+
+        if traces == True:
+            header_geo_trace = [f'{self.fileName[:-4]} geometric mean, {events} events, cuts {cuts}']
+            f_trace_geo = open(f'{self.fileName[:-4]}_trace_geo_mean.csv', 'w', newline='')
+            geo_trace_writer = csv.writer(f_trace_geo)
+            geo_trace_writer.writerow(header_geo_trace)
+
+
+
+        counter = 1
+        #iterate over the desired number of events and write out the traces and other parameters      
+        while True:
+            for i in range(len(ch)):
+                if ev[i].get_fails() != [0,0,0,0,0]:    # If there is any error, we disregard the event
+                    counter -= 1
+                    break
+
+                if output != False:
+                    calc_params = np.array([np.array(ev[ch[i]].get_long_integral()), np.array(ev[ch[i]].get_pulse_shape()), ev[ch[i]].get_t0(), ev[ch[i]].get_baseline(), ev[ch[i]].get_pulse_height()[0]])
+                    
+                    if type(cuts) != bool and i == 0:   # checks if there are cuts that need to be made and does them one at a time
+                        # Needs to be this way so we can get a specific number of events
+                        L, S = self.select_events(calc_params[0], calc_params[1], 'L', 'S', cuts, inc, visual=False)
+                        if len(L) == 0: # If L is empty, then the event was excluded
+                            counter -= 1
+                            break
+                    writer_params[i].writerow(calc_params[out[i] == 1])
+
+                if traces == True:
+                    writer_trace[i].writerow(ev[ch[i]].get_trace())
+
+
+            trace_list = [ev[i].get_trace()+ev[0].get_baseline() for i in ch]
+            # get_geometric_mean_trace must always be called on the first event in the ch list
+            # and needs to be supplied with the traces without their baseline subtracted
+            # might need to add the baseline from only one of the traces, so they all have the 
+            # same baseline and the geometric mean makes more sense
+            geometric_mean_params = ev[ch[0]].get_geometric_mean_trace(trace_list)
+            geo_writer.writerow(np.array(geometric_mean_params[1:])[out_geo == 1])
+
+            if traces == True:
+                geo_trace_writer.writerow(geometric_mean_params[0])
+
+
+
+            if events > counter or events == False:
+                ev = self.read_event(align_method_read=align_method_lst_out, align_args_read=align_args_lst_out)
+                counter += 1
+                if counter % 1000 == 0:
+                    print(f'{counter} events')
+
+                if ev == True: #if end of file was reached break read loop
+                    break 
+            else:
+                break
+        print('End reading')
+
+
+
 
     def lst_out(self, events=False, ch=True, output=True, traces=False, cuts=False, inc=None, filename="", align_method_lst_out=None, align_args_lst_out=None, integrals=None):
         """Reads a number of events from the file buffer for the channels specified, applying cuts if given. These cuts can be made using `read_dat.add_selections()`. Outputs a csv file for each active channel, containing
