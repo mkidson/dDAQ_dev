@@ -231,7 +231,7 @@ class event(object):
             # should be the crossing event. We then get the index of that point
             zero_cross_index = cfd_array_max_index + np.where( np.diff( np.sign( cfd_array[cfd_array_max_index:cfd_array_min_index] ) ) != 0 )[0][0]
         except Exception as err:   # This used to only except IndexError but I think this is more general
-            print(err)
+            # print(err)
             self.fails[4] = 1
             return cfd_array, -1
 
@@ -261,7 +261,7 @@ class event(object):
             # should be the crossing event. We then get the index of that point
             zero_cross_index = cfd_array_max_index + np.where( np.diff( np.sign( cfd_array[cfd_array_max_index:cfd_array_min_index] ) ) != 0 )[0][0]
         except Exception as err:   # This used to only except IndexError but I think this is more general
-            print(err)
+            # print(err)
             self.fails[4] = 1
             return cfd_array, -1
 

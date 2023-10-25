@@ -38,7 +38,7 @@ class event(object):
             self.align_pos = np.where(self.trace == np.max(self.trace))[0][0]
         
         elif alignment_method == 'CFD':
-            self.CFD_arr, self.align_pos = self.__cfd(*align_args)
+            self.CFD_arr, self.align_pos, self.align_pos_interp = self.__cfd(*align_args)
 
         if calculate_integrals == True:
             self.istart = self.align_pos + integrals[0]
@@ -119,7 +119,7 @@ class event(object):
             return self.shortIntegral / self.longIntegral
 
     def get_times(self):
-        return self.istart, self.ishort, self.ilong, self.align_pos
+        return self.istart, self.ishort, self.ilong, self.align_pos, self.align_pos_interp
 
 #-------------------------------------------------------------------------------------------------------------------------------------------------
 # Pulse height fitting RETURNS MAX at the moment and the index of max as representation for t
@@ -225,18 +225,22 @@ class event(object):
         cfd_array_min_index = cfd_array_max_index + np.argmin(cfd_array[cfd_array_max_index:])
 
         zero_cross_index = -1
+        zero_cross_interp = -1
 
         try:
             # We use np.diff to find where the sign of two adjacent points is different and that 
             # should be the crossing event. We then get the index of that point
             zero_cross_index = cfd_array_max_index + np.where( np.diff( np.sign( cfd_array[cfd_array_max_index:cfd_array_min_index] ) ) != 0 )[0][0]
+
+            zero_cross_interp = (0 - cfd_array[zero_cross_index]) * ( 1 / (cfd_array[zero_cross_index+1] - cfd_array[zero_cross_index]) ) + zero_cross_index
+
         except Exception as err:   # This used to only except IndexError but I think this is more general
-            print(err)
+            # print(err)
             self.fails[4] = 1
-            return cfd_array, -1
+            return cfd_array, -1, -1
 
 
-        return cfd_array, zero_cross_index
+        return cfd_array, zero_cross_index, zero_cross_interp
 
     def __cfd_with_trace_input(self, frac, offset, trace):
 
@@ -261,7 +265,7 @@ class event(object):
             # should be the crossing event. We then get the index of that point
             zero_cross_index = cfd_array_max_index + np.where( np.diff( np.sign( cfd_array[cfd_array_max_index:cfd_array_min_index] ) ) != 0 )[0][0]
         except Exception as err:   # This used to only except IndexError but I think this is more general
-            print(err)
+            # print(err)
             self.fails[4] = 1
             return cfd_array, -1
 

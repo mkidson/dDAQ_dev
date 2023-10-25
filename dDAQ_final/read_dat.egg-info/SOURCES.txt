@@ -1,4 +1,5 @@
 FoM.py
+README.txt
 event.py
 read_dat.py
 setup.py

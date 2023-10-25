@@ -116,7 +116,7 @@ class read_dat(object):
 
         return ev
 
-    def lst_out_geometric_mean(self, events=False, ch=True, output=True, out_geo=True, traces=False, cuts=False, inc=None, filename="", align_method_lst_out=None, align_args_lst_out=None, integrals=None):
+    def lst_out_geometric_mean(self, events=False, ch=True, output=True, out_geo=True, traces=False, cuts=False, inc=None, filename="", align_method_lst_out=None, align_args_lst_out=None, integrals=None, tof=False, tof_ch=2, tof_time_between=450, tof_peak_height=5000):
 
         if align_method_lst_out == None:
             align_method_lst_out = self.align_method
@@ -226,6 +226,26 @@ class read_dat(object):
                     counter -= 1
                     break
 
+
+                if tof == True:
+                    ev_times = ev[i].get_times()
+                    tof_trace = ev[tof_ch].get_trace()
+
+                    # peak = np.argmax(tof_trace_after_trigger)
+                    # diff = (peak + cutoff) - ev_times[3]
+
+                    # using 450 as the default time between pulses
+                    peaks = find_peaks(tof_trace, distance=tof_time_between, height=tof_peak_height)
+
+                    tof_trace_for_cfd = tof_trace[peaks[0][-1]-50:peaks[0][-1]+50]
+
+                    tof_cfd = self.__cfd(tof_trace_for_cfd, 0.75, 6)
+
+                    tof_align_point = tof_cfd[2] + peaks[0][-1] - 50
+
+                    t_diff = (tof_align_point - ev_times[4]) * self.nsPerSample
+                    
+
                 if output != False:
                     calc_params = np.array([np.array(ev[ch[i]].get_long_integral()), np.array(ev[ch[i]].get_pulse_shape()), ev[ch[i]].get_t0(), ev[ch[i]].get_baseline(), ev[ch[i]].get_pulse_height()[0]])
                     
@@ -247,7 +267,7 @@ class read_dat(object):
             # might need to add the baseline from only one of the traces, so they all have the 
             # same baseline and the geometric mean makes more sense
             geometric_mean_params = ev[ch[0]].get_geometric_mean_trace(trace_list)
-            geo_writer.writerow(np.array(geometric_mean_params[1:])[out_geo == 1])
+            geo_writer.writerow(np.array([geometric_mean_params[1], geometric_mean_params[2], geometric_mean_params[3], geometric_mean_params[4], t_diff])[out_geo == 1])
 
             if traces == True:
                 geo_trace_writer.writerow(geometric_mean_params[0])
@@ -269,7 +289,7 @@ class read_dat(object):
 
 
 
-    def lst_out(self, events=False, ch=True, output=True, traces=False, cuts=False, inc=None, filename="", align_method_lst_out=None, align_args_lst_out=None, integrals=None):
+    def lst_out(self, events=False, ch=True, output=True, traces=False, cuts=False, inc=None, filename="", align_method_lst_out=None, align_args_lst_out=None, integrals=None, tof=False, tof_ch=1, tof_time_between=450, tof_peak_height=5000):
         """Reads a number of events from the file buffer for the channels specified, applying cuts if given. These cuts can be made using `read_dat.add_selections()`. Outputs a csv file for each active channel, containing
 
             Args
@@ -312,6 +332,8 @@ class read_dat(object):
         if integrals == None:
             integrals = self.integrals
 
+        # should remain 0 if tof is not being done
+        t_diff = 0
 
         ev = self.read_event(align_method_read=align_method_lst_out, align_args_read=align_args_lst_out, integrals=integrals)
         out = []
@@ -379,9 +401,29 @@ class read_dat(object):
                 if ev[i].get_fails() != [0,0,0,0,0]:    # If there is any error, we disregard the event
                     counter -= 1
                     break
+                    
+                if tof == True:
+                    ev_times = ev[i].get_times()
+                    tof_trace = ev[tof_ch].get_trace()
+
+                    # peak = np.argmax(tof_trace_after_trigger)
+                    # diff = (peak + cutoff) - ev_times[3]
+
+                    # using 450 as the default time between pulses
+                    peaks = find_peaks(tof_trace, distance=tof_time_between, height=tof_peak_height)
+
+                    tof_trace_for_cfd = tof_trace[peaks[0][-1]-50:peaks[0][-1]+50]
+
+                    tof_cfd = self.__cfd(tof_trace_for_cfd, 0.75, 6)
+
+                    tof_align_point = tof_cfd[2] + peaks[0][-1] - 50
+
+                    t_diff = (tof_align_point - ev_times[4]) * self.nsPerSample
 
                 if output != False:
-                    calc_params = np.array([np.array(ev[ch[i]].get_long_integral()), np.array(ev[ch[i]].get_pulse_shape()), ev[ch[i]].get_t0(), ev[ch[i]].get_baseline(), ev[ch[i]].get_pulse_height()[0]])
+                    calc_params = np.array([np.array(ev[ch[i]].get_long_integral()), np.array(ev[ch[i]].get_pulse_shape()), ev[ch[i]].get_t0(), ev[ch[i]].get_baseline(), t_diff])
+
+                    # calc_params = np.array([np.array(ev[ch[i]].get_long_integral()), np.array(ev[ch[i]].get_pulse_shape()), ev[ch[i]].get_t0(), ev[ch[i]].get_baseline(), ev[ch[i]].get_pulse_height()[0]])
                     
                     if type(cuts) != bool and i == 0:   # checks if there are cuts that need to be made and does them one at a time
                         # Needs to be this way so we can get a specific number of events
@@ -735,4 +777,43 @@ class read_dat(object):
             plt.xlabel(f'{x_param_name} [ch]')
             plt.ylabel(f'{y_param_name} [ch]')
             plt.show(block=True)
-        return x_param[mask], y_param[mask]
+        return x_param[mask], y_param[mask], mask
+
+
+    def get_polygons(self):
+        return self.polygon_cuts
+
+
+    def __cfd(self, trace, frac, offset):
+
+        # We have one trace scaled down and the other inverted and delayed
+        frac_trace = trace * frac
+        delay_trace = np.roll(trace, offset)
+
+        # Then subtract one from the other
+        cfd_array = frac_trace - delay_trace
+
+        # If there is only one pulse in the window, this will find the index positions of
+        # the min and max, between which should be the zero crossing event that we care about
+        # cfd_array_max_index = np.where(cfd_array == np.max(cfd_array))[0][0]
+        cfd_array_max_index = np.argmax(cfd_array)
+        # cfd_array_min_index = cfd_array_max_index + np.where(cfd_array[cfd_array_max_index:] == np.min(cfd_array[cfd_array_max_index:]))[0][0]
+        cfd_array_min_index = cfd_array_max_index + np.argmin(cfd_array[cfd_array_max_index:])
+
+        zero_cross_index = -1
+        zero_cross_interp = -1
+
+        try:
+            # We use np.diff to find where the sign of two adjacent points is different and that 
+            # should be the crossing event. We then get the index of that point
+            zero_cross_index = cfd_array_max_index + np.where( np.diff( np.sign( cfd_array[cfd_array_max_index:cfd_array_min_index] ) ) != 0 )[0][0]
+
+            zero_cross_interp = (0 - cfd_array[zero_cross_index]) * ( 1 / (cfd_array[zero_cross_index+1] - cfd_array[zero_cross_index]) ) + zero_cross_index
+
+        except Exception as err:   # This used to only except IndexError but I think this is more general
+            # print(err)
+            # self.fails[4] = 1
+            return cfd_array, -1, -1
+
+
+        return cfd_array, zero_cross_index, zero_cross_interp
